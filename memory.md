@@ -50,6 +50,7 @@
 - The local Xcode toolchain is now present and verified; the app installs and opens in the `iPhone 17 Pro` simulator through the Expo development client flow.
 - The repo handoff path now assumes the real `ios/` project files should be shared in git, while `ios/Pods/`, `ios/build/`, and local Codex/Playwright folders remain ignored.
 - A dedicated cofounder onboarding note now lives in `docs/ops/cofounder-setup.md`.
+- The private GitHub collaboration remote is now `https://github.com/ClawdGItMan/project-momentum`.
 
 ## Working Assumptions
 
@@ -66,6 +67,7 @@
 - `npm` is the local package-manager fallback for this repo because `pnpm` was not available in the current environment.
 - This specific environment now has full Xcode installed, so verification can include simulator launch in addition to web export, Expo web runtime, and iOS prebuild.
 - For future collaborators, cloning into a path without spaces is the preferred local setup even though the current repo now contains compatibility patches for the spaced path.
+- GitHub is now the working collaboration source of truth for the two-founder build loop.
 
 ## Open Questions
 

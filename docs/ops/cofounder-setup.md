@@ -11,6 +11,10 @@ The best path is:
    - `~/Projects/project-momentum`
 5. Use feature branches and small PRs instead of both people editing the same branch.
 
+Current repo:
+
+- `https://github.com/ClawdGItMan/project-momentum`
+
 ## Why This Setup
 
 - Apple Health and the Expo development-build workflow depend on native iOS files, so the `ios/` project should be shared.
@@ -55,6 +59,7 @@ Do not commit:
 5. Run:
 
 ```bash
+git clone https://github.com/ClawdGItMan/project-momentum ~/Projects/project-momentum
 cd ~/Projects/project-momentum
 npm install
 pod install --project-directory=ios

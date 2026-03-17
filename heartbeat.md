@@ -31,6 +31,7 @@ Week 1: research plus first MVP build session and demo hardening. The app shell,
 - Max: narrowed HealthKit read scope, removed unused Health write messaging, and disabled the Expo dev-client network inspector default in iOS pod properties
 - Max: local Xcode simulator launch verified on `iPhone 17 Pro`, with native shell-script fixes added for a repo path that contains spaces
 - Max: repo handoff cleanup so a cofounder can clone the real iOS project instead of regenerating native state from scratch
+- Max: private GitHub collaboration repo is now live at `ClawdGItMan/project-momentum`
 
 ## Blockers
 
@@ -47,6 +48,7 @@ Week 1: research plus first MVP build session and demo hardening. The app shell,
 - Max and co-founder: schedule the first round of interviews, including Mary and other self-improvement-oriented friends
 - Max: validate Apple Health connected versus fallback on a physical iPhone now that the local Xcode simulator path is stable
 - Max: push the repo to a private remote and have the cofounder clone it into a no-space local path
+- Max and co-founder: validate that a fresh clone from GitHub boots cleanly on the cofounder machine
 - Max: pressure-test the dev-only demo controls and decide whether any should move or shrink before external demos
 - Max: deepen the seeded Home / Profile / Habits shells with stronger motion, milestone treatment, and a denser social payoff
 - Max: decide whether the next slice is deeper feed interaction or stronger profile / milestone treatment
@@ -65,4 +67,4 @@ High on the current build direction. The repo now has a credible app shell, a re
 
 ## Last Updated
 
-2026-03-17 13:31 EDT
+2026-03-17 13:44 EDT
