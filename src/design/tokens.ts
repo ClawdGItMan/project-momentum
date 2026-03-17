@@ -1,0 +1,63 @@
+export const rawTokens = {
+  color: {
+    slate950: "#0B1220",
+    slate900: "#0F172A",
+    slate800: "#1E293B",
+    slate700: "#334155",
+    slate600: "#475569",
+    slate500: "#64748B",
+    slate400: "#94A3B8",
+    slate300: "#CBD5E1",
+    slate200: "#E2E8F0",
+    slate100: "#F1F5F9",
+    zinc50: "#F8FAFC",
+    sky500: "#0EA5E9",
+    sky600: "#0284C7",
+    cyan500: "#06B6D4",
+    emerald500: "#10B981",
+    amber500: "#F59E0B",
+    rose500: "#F43F5E",
+    white: "#FFFFFF",
+    black: "#000000",
+  },
+  spacing: {
+    xxs: 4,
+    xs: 8,
+    sm: 12,
+    md: 16,
+    lg: 20,
+    xl: 28,
+    xxl: 36,
+  },
+  radius: {
+    sm: 10,
+    md: 14,
+    lg: 20,
+    pill: 999,
+  },
+  borderWidth: {
+    hairline: 1,
+    regular: 1.5,
+  },
+  shadow: {
+    soft: {
+      shadowColor: "#0B1220",
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
+      shadowRadius: 18,
+      elevation: 6,
+    },
+    lift: {
+      shadowColor: "#0B1220",
+      shadowOffset: { width: 0, height: 14 },
+      shadowOpacity: 0.18,
+      shadowRadius: 24,
+      elevation: 10,
+    },
+  },
+  opacity: {
+    disabled: 0.45,
+    subtle: 0.72,
+  },
+} as const;
+
