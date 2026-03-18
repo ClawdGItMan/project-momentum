@@ -10,6 +10,8 @@ export type HomeSegment = "squads" | "friends";
 
 export type AccountabilityStyle = "friends" | "squad-first" | "mixed";
 
+export type AuthState = "signed-out" | "authenticated" | "demo";
+
 export interface Friend {
   id: string;
   name: string;
@@ -19,11 +21,33 @@ export interface Friend {
 
 export interface Squad {
   id: string;
+  ownerId?: string;
   name: string;
   handle: string;
   description: string;
   memberCount: number;
   currentFocus: string;
+}
+
+export interface SquadChatOverview {
+  squadId: string;
+  unreadCount: number;
+  lastMessageAt?: string;
+  lastMessagePreview?: string;
+  lastMessageAuthorName?: string;
+}
+
+export interface SquadMessage {
+  id: string;
+  squadId: string;
+  authorId: string;
+  authorName: string;
+  authorUsername: string;
+  body: string;
+  createdAt: string;
+  pending?: boolean;
+  failed?: boolean;
+  clientMessageId?: string;
 }
 
 export interface Habit {
@@ -75,6 +99,7 @@ export interface UserProfile {
   pillars: FocusPillar[];
   goals: string[];
   accountabilityStyle: AccountabilityStyle;
+  defaultAudience?: AudienceVisibility;
   selectedSquadId?: string;
 }
 

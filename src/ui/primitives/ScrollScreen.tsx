@@ -1,5 +1,6 @@
 import React, { PropsWithChildren } from "react";
 import {
+  Platform,
   SafeAreaView,
   ScrollView,
   ScrollViewProps,
@@ -25,6 +26,7 @@ export function ScrollScreen({
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
         contentContainerStyle={[
           styles.content,
           padded && styles.padded,

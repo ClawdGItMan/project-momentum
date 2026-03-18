@@ -1,5 +1,22 @@
 # User Flows
 
+## Flow 0: Account Auth
+
+### Goal
+
+Let founder-alpha users create a real private account, restore sessions on relaunch, and enter onboarding only after authentication succeeds.
+
+### Steps
+
+1. User lands on the auth screen.
+2. User signs in with email/password or creates an account.
+3. If email confirmation is required, the app shows a confirmation-needed state instead of pretending setup is complete.
+4. Authenticated users continue into onboarding or the main app based on onboarding status.
+
+### Success Outcome
+
+The app has a real account boundary instead of a demo-only identity model.
+
 ## Flow 1: Onboarding Questionnaire
 
 ### Goal
@@ -11,7 +28,7 @@ Understand what the user wants to improve and personalize the app quickly.
 1. User lands on a bold intro screen explaining the social accountability promise.
 2. User selects top improvement pillars and specific goals.
 3. User chooses what they want to be known for in the app.
-4. User reaches a tailored setup recommendation.
+4. User reaches a tailored setup recommendation and a recap before the first check-in.
 
 ### Success Outcome
 
@@ -25,10 +42,11 @@ Create a visible identity centered on growth, not vanity.
 
 ### Steps
 
-1. User picks username, profile photo, and short mission line.
+1. User picks username and short mission line.
 2. User chooses visible focus areas.
 3. User connects Apple Health or falls back to manual setup only if needed.
-4. User previews how their profile momentum board and consistency status will look.
+4. User optionally selects a live squad they already belong to, or skips.
+5. User completes the backend onboarding bootstrap and previews how their profile momentum board and consistency status will look.
 
 ### Success Outcome
 
@@ -61,10 +79,11 @@ Make sharing progress structured, fast, and rewarding.
 
 1. User taps a primary post or check-in action.
 2. User selects progress type such as workout, recovery, habit win, or reflection.
-3. User attaches metrics or manually enters progress.
+3. User attaches Apple Health metrics or manually enters progress if coverage is unavailable.
 4. User chooses whether the post is private, friend-visible, or shared to a squad.
 5. User adds a short note.
-6. User publishes the update.
+6. App persists the check-in and attached normalized metrics to Supabase.
+7. User publishes the update.
 
 ### Success Outcome
 
@@ -80,10 +99,32 @@ Help users see peer momentum and contribute encouragement.
 
 1. User opens the feed.
 2. User sees structured progress updates from friends or squads.
-3. User taps into another profile to explore their momentum board.
-4. User leaves an encouragement reaction or comment.
-5. User adds a friend they want to stay accountable with or joins a squad with them.
+3. User opens the selected squad card and sees the squad chat preview.
+4. User taps into another profile to explore their momentum board.
+5. User leaves an encouragement reaction.
+6. User adds a friend via exact username, creates their own squad, or accepts a private invite token.
+7. From a squad they own, the user invites an existing friend directly into that room.
+8. When needed, the sender generates one open squad token from that owned squad and shares it out-of-band with the specific person they want to bring in.
 
 ### Success Outcome
 
 The social loop feels useful and motivating, not noisy.
+
+## Flow 6: Squad Chat
+
+### Goal
+
+Give each squad a lightweight real-time room for coordination and encouragement without turning the product into a generic chat app.
+
+### Steps
+
+1. User opens a squad from Home or Connections.
+2. App loads only the join-forward message history visible to that member from Supabase and subscribes to realtime inserts.
+3. User sends a short text message into the squad room.
+4. Other active squad members see the new message live.
+5. Unread counts clear when the room is opened and marked read.
+6. Optimistic sends reconcile cleanly because the client uses idempotent UUID message ids.
+
+### Success Outcome
+
+Squads feel alive and coordinated, while the feed remains the primary proof surface.

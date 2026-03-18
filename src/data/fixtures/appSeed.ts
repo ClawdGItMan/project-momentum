@@ -48,6 +48,7 @@ export const friendsSeed: Friend[] = [
 export const squadsSeed: Squad[] = [
   {
     id: "squad-1",
+    ownerId: "user-1",
     name: "Morning Proof",
     handle: "proof",
     description: "A tight squad that values consistency over hype.",
@@ -56,6 +57,7 @@ export const squadsSeed: Squad[] = [
   },
   {
     id: "squad-2",
+    ownerId: "friend-1",
     name: "Steady Builders",
     handle: "builders",
     description: "Friends tracking workouts, habits, and recovery together.",
@@ -94,7 +96,6 @@ export const onboardingDraftSeed: OnboardingDraft = {
   username: "maxmomentum",
   missionLine: "Building a stronger baseline, one honest check-in at a time.",
   city: "New York",
-  selectedSquadId: "squad-1",
 };
 
 export const userSeed: UserProfile = {
@@ -106,7 +107,7 @@ export const userSeed: UserProfile = {
   pillars: onboardingDraftSeed.pillars,
   goals: onboardingDraftSeed.goals,
   accountabilityStyle: onboardingDraftSeed.accountabilityStyle,
-  selectedSquadId: onboardingDraftSeed.selectedSquadId,
+  selectedSquadId: "squad-1",
 };
 
 const seededConsistency = calculateConsistency({
@@ -165,7 +166,6 @@ export const postsSeed: ProgressPost[] = [
 export const checkInDraftSeed: CheckInDraft = {
   type: "workout",
   audience: "friends",
-  squadId: "squad-1",
   caption: "Lifted even though the day was packed. That matters more than perfect volume.",
   manualWorkoutName: "Strength session",
   manualDurationMinutes: "42",

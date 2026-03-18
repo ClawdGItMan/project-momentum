@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Founder Workflow
+    url: https://github.com/ClawdGItMan/project-momentum/blob/main/docs/ops/cofounder-setup.md
+    about: Read this first if you are deciding how to work with AI on the project.

@@ -20,7 +20,7 @@
 		13B07F961A680F5B00A75B9A /* ProjectMomentum.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ProjectMomentum.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = ProjectMomentum/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = ProjectMomentum/Info.plist; sourceTree = "<group>"; };
-		5EE5B2ABBA302EAFAA43234E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = ProjectMomentum/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		5EE5B2ABBA302EAFAA43234E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = ProjectMomentum/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		5F62C60A948488C14C71889A /* Pods-ProjectMomentum.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ProjectMomentum.debug.xcconfig"; path = "Target Support Files/Pods-ProjectMomentum/Pods-ProjectMomentum.debug.xcconfig"; sourceTree = "<group>"; };
 		839C1FE9B3119D0922332D07 /* libPods-ProjectMomentum.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-ProjectMomentum.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9EDF3054C8F0C6C135ECF10B /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-ProjectMomentum/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
@@ -73,7 +73,6 @@
 				5F62C60A948488C14C71889A /* Pods-ProjectMomentum.debug.xcconfig */,
 				BCFD5FE5E888258B41591CDF /* Pods-ProjectMomentum.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -168,6 +167,11 @@
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
 						LastSwiftMigration = 1250;
+						SystemCapabilities = {
+							com.apple.HealthKit = {
+								enabled = 1;
+							};
+						};
 					};
 				};
 			};
@@ -364,6 +368,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ProjectMomentum/ProjectMomentum.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LFTGHGFBKY;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -400,6 +405,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = ProjectMomentum/ProjectMomentum.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LFTGHGFBKY;
 				INFOPLIST_FILE = ProjectMomentum/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (

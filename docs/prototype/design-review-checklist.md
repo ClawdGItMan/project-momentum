@@ -32,6 +32,7 @@ Check all relevant states:
 - dense content
 - error or disconnected state
 - long text and long-name behavior
+- text-entry screens keep the active field reachable when the iPhone keyboard is open
 
 ## Motion And Feedback
 

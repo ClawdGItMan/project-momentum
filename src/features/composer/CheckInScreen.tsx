@@ -29,8 +29,10 @@ export function CheckInScreen() {
   const router = useRouter();
   const {
     checkInDraft,
+    connectHealth,
     currentUser,
     healthConnection,
+    healthLoading,
     healthPreviewActive,
     healthSnapshot,
     manualFallbackEnabled,
@@ -265,6 +267,13 @@ export function CheckInScreen() {
             </View>
           ) : null}
 
+          <Button
+            label={healthLoading ? "Syncing Apple Health" : "Refresh health sync"}
+            fullWidth={false}
+            variant="secondary"
+            loading={healthLoading}
+            onPress={() => void connectHealth()}
+          />
           <Button
             label="Metric detail"
             variant="ghost"

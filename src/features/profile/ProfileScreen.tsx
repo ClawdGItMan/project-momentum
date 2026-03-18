@@ -20,6 +20,7 @@ import {
 export function ProfileScreen() {
   const router = useRouter();
   const {
+    authState,
     consistency,
     currentUser,
     feedPosts,
@@ -27,6 +28,7 @@ export function ProfileScreen() {
     healthPreviewActive,
     healthSnapshot,
     resetDemoSession,
+    signOut,
   } = useMomentumSession();
 
   const myPosts = feedPosts.filter((post) => post.authorId === currentUser.id);
@@ -42,6 +44,9 @@ export function ProfileScreen() {
         <View style={styles.wrap}>
           <Badge label={formatConnectionState(healthConnection.state)} tone="accent" />
           {healthPreviewActive ? <Badge label="Demo preview" tone="accent" /> : null}
+          {authState === "authenticated" ? (
+            <Badge label="Live account" tone="success" />
+          ) : null}
         </View>
       </View>
 
@@ -137,6 +142,17 @@ export function ProfileScreen() {
             variant="secondary"
             fullWidth={false}
             onPress={() => void resetDemoSession()}
+          />
+        </Card>
+      ) : null}
+
+      {authState === "authenticated" ? (
+        <Card title="Account">
+          <Button
+            label="Sign out"
+            variant="ghost"
+            fullWidth={false}
+            onPress={() => void signOut()}
           />
         </Card>
       ) : null}

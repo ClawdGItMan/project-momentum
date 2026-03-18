@@ -10,7 +10,7 @@ Turn the raw concept into a validated, prioritized, prototype-ready spec. By the
 
 ## Current Phase
 
-Week 1: research plus first MVP build session and demo hardening.
+Week 1 moving into founder-alpha integration: the first vertical slice is now backed by hosted Supabase auth/data, with persisted check-ins, owned-squad friend invites plus open-token fallback, and live squad chat added on top of the demo-ready shell.
 
 ## Desired Outcomes
 
@@ -19,6 +19,7 @@ Week 1: research plus first MVP build session and demo hardening.
 - first round of user interviews completed or actively scheduled
 - prototype brief, flows, and tech direction stable enough to build from
 - Expo app shell, design system foundation, and first polished vertical slice demo-ready
+- backend foundation plan locked tightly enough to start implementation without reopening the architecture every day
 - conviction level clearer than it was at the start of the week
 
 ## Workstreams
@@ -56,6 +57,8 @@ Week 1: research plus first MVP build session and demo hardening.
 - ship onboarding through first workout check-in into seeded Home
 - validate iOS prebuild and HealthKit entitlement wiring
 - harden the slice for repeatable demos across browser and future Xcode/EAS runs
+- lock the backend stack, core schema, privacy model, and integration boundaries before writing server code
+- add a simple AI-first founder workflow so two non-technical founders can collaborate without getting pulled into developer setup
 
 ## Owners
 
@@ -70,6 +73,12 @@ Week 1: research plus first MVP build session and demo hardening.
 - stable prototype brief and screen map
 - build-ready `AGENTS.md` and supporting role cards
 - working Expo app shell with a credible first vertical slice, demo controls, and runbook
+- a concrete backend phase plan covering accounts, squads, feed persistence, and staged provider integrations
+- a real Phase 0 backend scaffold in repo with Supabase schema, RLS, and a backend runtime shell
+- a hosted Supabase project linked to the repo with the Phase 0 schema applied and local backend health checks passing
+- a founder-friendly GitHub issue, PR, and dashboard workflow that lets AI do most of the work
+- a Phase 1 founder-alpha mobile path with real auth, backend-backed profile/feed/provider state, persisted check-ins, and live squad chat
+- a founder-alpha Connections surface that can send exact-username friend invites, let users create their own squad, invite existing friends into owned squads, generate and display redeemable invite tokens, and accept friend or squad invite tokens without leaving the app
 - clearer go/no-go view for week two
 
 ## Exit Criteria

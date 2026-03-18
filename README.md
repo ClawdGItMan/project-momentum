@@ -15,13 +15,13 @@ Over the next two weeks, the goal is to answer one question with conviction: sho
 
 Start here if you are new to the workspace:
 
-1. Read [soul.md](soul.md) for the mission and brand north star.
-2. Read [heartbeat.md](heartbeat.md) for the live status.
-3. Read [memory.md](memory.md) for durable context and decisions.
-4. Read [docs/ops/sprint-01.md](docs/ops/sprint-01.md) for the current sprint plan.
-5. Read [docs/ops/mvp-foundation.md](docs/ops/mvp-foundation.md) for the current build foundation.
-6. For app work, inspect `app/`, `src/`, and `ios/` after reading the docs.
-7. Open the relevant product, research, or prototype docs based on the task.
+1. If you are a founder or collaborator, read [docs/ops/cofounder-setup.md](docs/ops/cofounder-setup.md) first.
+2. Read [soul.md](soul.md) for the mission and brand north star.
+3. Read [heartbeat.md](heartbeat.md) for the live status.
+4. Read [memory.md](memory.md) for durable context and decisions.
+5. Read [docs/ops/sprint-01.md](docs/ops/sprint-01.md) for the current sprint plan.
+6. Read [docs/ops/mvp-foundation.md](docs/ops/mvp-foundation.md) for the current build foundation.
+7. For app work, inspect `app/`, `src/`, and `ios/` after reading the docs.
 
 ## App Scaffold
 
@@ -37,14 +37,19 @@ The repo now includes a real Expo Router app shell:
 Run the app with:
 
 - `npm install`
+- `npm install --prefix backend`
+- `npm run setup:hooks`
 - `npm run typecheck`
+- `npm run verify`
 - `npm start`
 - `npm run ios`
 - `npm run ios:xcode`
 
 For a practical demo handoff, use [docs/ops/demo-runbook.md](docs/ops/demo-runbook.md).
 
-For a practical cofounder handoff and collaboration setup, use [docs/ops/cofounder-setup.md](docs/ops/cofounder-setup.md).
+For the founder-friendly collaboration flow, use [docs/ops/cofounder-setup.md](docs/ops/cofounder-setup.md).
+For the Build Owner checks, use [docs/ops/build-owner-checklist.md](docs/ops/build-owner-checklist.md).
+For the background AI and merge rules, use [docs/ops/collaboration-playbook.md](docs/ops/collaboration-playbook.md).
 
 ## Workspace Map
 
@@ -87,6 +92,9 @@ For a practical cofounder handoff and collaboration setup, use [docs/ops/cofound
 - [docs/ops/sprint-01.md](docs/ops/sprint-01.md): week-one research and validation plan
 - [docs/ops/mvp-foundation.md](docs/ops/mvp-foundation.md): current build foundation and guardrails
 - [docs/ops/build-session-playbook.md](docs/ops/build-session-playbook.md): how to start a fresh Codex build session well
+- [docs/ops/cofounder-setup.md](docs/ops/cofounder-setup.md): the simple founder-facing workflow
+- [docs/ops/build-owner-checklist.md](docs/ops/build-owner-checklist.md): the short merge and native-check list for Max
+- [docs/ops/collaboration-playbook.md](docs/ops/collaboration-playbook.md): the background AI and build-owner rules
 - [docs/ops/demo-runbook.md](docs/ops/demo-runbook.md): exact steps to demo in web, Xcode, or EAS contexts
 
 ### Agent roles
@@ -117,6 +125,7 @@ Use this order unless there is a strong reason not to:
 - Make reasonable assumptions for low-risk progress, but log them in [memory.md](memory.md).
 - Prefer multiagent workflows for substantial work so research, design, engineering, and prototype planning stay connected.
 - Keep every meaningful work session reflected in the live docs.
+- Keep founder collaboration simple: GitHub issues start the work, AI opens the pull request, and the Build Owner merges after review.
 
 ## Current Focus
 

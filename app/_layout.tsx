@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import { useEffect } from "react";
 import "react-native-reanimated";
+import "react-native-url-polyfill/auto";
 
 import { theme } from "@/src/design";
 import { MomentumSessionProvider } from "@/src/features/app/MomentumSessionProvider";
@@ -49,6 +50,7 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
           <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" />
           <Stack.Screen name="(onboarding)" />
           <Stack.Screen name="(app)" />
           <Stack.Screen name="modals" options={{ presentation: "modal" }} />
