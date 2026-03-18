@@ -1,0 +1,17 @@
+#!/bin/sh
+
+set -e
+
+while read local_ref local_sha remote_ref remote_sha
+do
+  remote_branch="${remote_ref#refs/heads/}"
+
+  if [ "$remote_branch" = "main" ]; then
+    echo "Direct pushes to main are blocked in this clone."
+    echo "Create a feature branch and open a pull request instead."
+    exit 1
+  fi
+done
+
+echo "Running npm run verify before push..."
+npm run verify

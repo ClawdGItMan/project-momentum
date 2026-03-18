@@ -24,7 +24,7 @@ const metricKeys = [
 
 export interface AppleHealthBridge {
   isAvailable(): Promise<boolean>;
-  authorize(): Promise<boolean>;
+  authorize(): Promise<{ authorized: boolean; error?: string }>;
   disconnect?(): Promise<void>;
   readMetrics(window: MetricWindow): Promise<
     Partial<
@@ -38,6 +38,12 @@ export interface AppleHealthBridge {
 
 const defaultCoverage = (reason: MetricCoverage["reason"]): MetricCoverage[] =>
   metricKeys.map((key) => createCoverage(key, false, reason));
+
+const unavailableMessage =
+  "HealthKit is unavailable in this build. Reinstall the iOS development build after enabling HealthKit signing and make sure you are testing on a physical iPhone.";
+
+const permissionsMessage =
+  "Apple Health permissions still need attention. In the Health app, enable Workouts, Steps, Sleep, and Active Energy for Project Momentum, then try again.";
 
 export class AppleHealthAdapter implements HealthProviderAdapter {
   readonly provider = "apple-health" as const;
@@ -65,6 +71,7 @@ export class AppleHealthAdapter implements HealthProviderAdapter {
       this.state = {
         provider: this.provider,
         state: "unavailable",
+        lastError: unavailableMessage,
         coverage: defaultCoverage("provider_unavailable"),
       };
       return this.state;
@@ -76,11 +83,12 @@ export class AppleHealthAdapter implements HealthProviderAdapter {
       coverage: defaultCoverage("not_requested"),
     };
 
-    const authorized = await this.bridge.authorize();
-    if (!authorized) {
+    const authorization = await this.bridge.authorize();
+    if (!authorization.authorized) {
       this.state = {
         provider: this.provider,
         state: "needs_attention",
+        lastError: authorization.error ?? permissionsMessage,
         coverage: defaultCoverage("permission_missing"),
       };
       return this.state;

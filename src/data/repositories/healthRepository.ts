@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { NativeModules, Platform } from "react-native";
 
 import { createWindow } from "@/src/domain/integrations/normalization";
 import type {
@@ -53,9 +53,43 @@ type HealthModule = {
   ) => void;
 };
 
+const normalizeHealthError = (error: unknown): string | undefined => {
+  if (!error) return undefined;
+  if (typeof error === "string") return error;
+  if (error instanceof Error && error.message) return error.message;
+
+  if (typeof error === "object" && error && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim().length) {
+      return message;
+    }
+  }
+
+  try {
+    const serialized = JSON.stringify(error);
+    if (serialized && serialized !== "{}") {
+      return serialized;
+    }
+  } catch {
+    // Ignore serialization failures and fall back to String(error).
+  }
+
+  const fallback = String(error);
+  return fallback === "[object Object]" ? undefined : fallback;
+};
+
+const healthPermissionConstants = {
+  Permissions: {
+    ActiveEnergyBurned: "ActiveEnergyBurned",
+    SleepAnalysis: "SleepAnalysis",
+    StepCount: "StepCount",
+    Workout: "Workout",
+  },
+} as const;
+
 const createPreviewBridge = (): AppleHealthBridge => ({
   isAvailable: async () => true,
-  authorize: async () => true,
+  authorize: async () => ({ authorized: true }),
   readMetrics: async () =>
     seededAppleHealthMetrics.reduce<
       Record<string, { value: number | string | boolean | null; unit?: string }>
@@ -77,17 +111,60 @@ const createPreviewBridge = (): AppleHealthBridge => ({
     ),
 });
 
+const hasRequiredHealthModuleMethods = (
+  candidate?: Partial<HealthModule> | null,
+): candidate is HealthModule =>
+  Boolean(
+    candidate &&
+      typeof candidate.isAvailable === "function" &&
+      typeof candidate.initHealthKit === "function" &&
+      typeof candidate.getDailyStepCountSamples === "function" &&
+      typeof candidate.getSleepSamples === "function" &&
+      typeof candidate.getActiveEnergyBurned === "function" &&
+      typeof candidate.getSamples === "function",
+  );
+
 const loadHealthModule = (): HealthModule | undefined => {
+  const nativeModule = (NativeModules?.AppleHealthKit ?? null) as Partial<HealthModule> | null;
+
   try {
-    const loaded = require("react-native-health") as HealthModule;
-    if (
-      loaded &&
-      typeof loaded.isAvailable === "function" &&
-      typeof loaded.initHealthKit === "function"
-    ) {
-      return loaded;
+    const loaded = require("react-native-health") as {
+      default?: HealthModule;
+      HealthKit?: HealthModule;
+      Constants?: HealthModule["Constants"];
+      [key: string]: unknown;
+    };
+    const resolved =
+      loaded?.default ??
+      loaded?.HealthKit ??
+      (loaded as unknown as HealthModule);
+
+    const constants =
+      resolved?.Constants ??
+      loaded?.Constants ??
+      healthPermissionConstants;
+
+    const candidate = nativeModule
+      ? ({
+          ...resolved,
+          ...nativeModule,
+          Constants: constants,
+        } as HealthModule)
+      : (resolved as HealthModule);
+
+    if (hasRequiredHealthModuleMethods(candidate) && candidate.Constants?.Permissions) {
+      return candidate;
     }
-  } catch {}
+  } catch (error) {
+    console.warn("Failed to load react-native-health", error);
+  }
+
+  if (hasRequiredHealthModuleMethods(nativeModule)) {
+    return {
+      ...(nativeModule as HealthModule),
+      Constants: healthPermissionConstants,
+    };
+  }
 
   return undefined;
 };
@@ -95,11 +172,17 @@ const loadHealthModule = (): HealthModule | undefined => {
 const callAvailability = async (healthModule: HealthModule): Promise<boolean> =>
   new Promise((resolve) => {
     healthModule.isAvailable((error, results) => {
+      const normalizedError = normalizeHealthError(error);
+      if (normalizedError) {
+        console.warn("Apple Health availability check failed", normalizedError);
+      }
       resolve(!error && Boolean(results));
     });
   });
 
-const authorizeHealthKit = async (healthModule: HealthModule): Promise<boolean> =>
+const authorizeHealthKit = async (
+  healthModule: HealthModule,
+): Promise<{ authorized: boolean; error?: string }> =>
   new Promise((resolve) => {
     const permissions = {
       permissions: {
@@ -114,7 +197,15 @@ const authorizeHealthKit = async (healthModule: HealthModule): Promise<boolean> 
     };
 
     healthModule.initHealthKit(permissions, (error) => {
-      resolve(!error);
+      const normalizedError = normalizeHealthError(error);
+      resolve(
+        normalizedError
+          ? {
+              authorized: false,
+              error: normalizedError,
+            }
+          : { authorized: true },
+      );
     });
   });
 

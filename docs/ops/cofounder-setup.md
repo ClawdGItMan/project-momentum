@@ -1,80 +1,106 @@
 # Cofounder Setup
 
-## Best Collaboration Setup
+## Start Here
 
-The best path is:
+This project now runs on one simple rule:
 
-1. Put this project in a private GitHub repo.
-2. Commit the app source, docs, and the `ios/` native project files.
-3. Do not commit `ios/Pods/`, `ios/build/`, or local tool folders.
-4. Have each person clone into a path without spaces, for example:
-   - `~/Projects/project-momentum`
-5. Use feature branches and small PRs instead of both people editing the same branch.
+- GitHub is the shared home.
+- AI does most of the work.
+- Max keeps the real build machine.
+- The cofounder works through GitHub from any computer.
 
-Current repo:
+If you remember nothing else, remember this:
 
-- `https://github.com/ClawdGItMan/project-momentum`
+1. Open or comment on a GitHub issue.
+2. Let AI do the work and open a pull request.
+3. Review the plain-English summary in GitHub.
+4. Max merges after a quick check when needed.
 
-## Why This Setup
+## Who Does What
 
-- Apple Health and the Expo development-build workflow depend on native iOS files, so the `ios/` project should be shared.
-- The current repo path contains a space, which required local shell-script fixes in Xcode build phases.
-- Cloning into a no-space path will reduce native build friction for the next person.
+### Max
 
-## What To Commit
+- keeps the one real local build setup
+- keeps the local `backend/.env`
+- runs the occasional iPhone or Apple Health check
+- merges approved pull requests into `main`
 
-Commit:
+### Cofounder
 
-- docs
-- `app/`
-- `src/`
-- `assets/`
-- `plugins/`
-- `package.json`
-- `package-lock.json`
-- `app.json`
-- `ios/Podfile`
-- `ios/Podfile.lock`
-- `ios/Podfile.properties.json`
-- `ios/ProjectMomentum/`
-- `ios/ProjectMomentum.xcodeproj/`
+- opens new issues in plain English
+- comments on priorities, changes, and questions
+- reviews pull requests from GitHub without needing local setup
+- helps decide what AI should do next
 
-Do not commit:
+### AI
 
-- `node_modules/`
-- `.expo/`
-- `ios/Pods/`
-- `ios/build/`
-- `ios/.xcode.env.local`
-- `.claude/`
-- `.playwright-cli/`
-- `.tmp/`
+- reads the issue and the current project docs
+- makes the change in a branch
+- updates the live project docs when the state really changes
+- opens a pull request with a simple summary
+- tells you what to review and what might need a build-owner check
 
-## Cofounder Onboarding
+## The Simple Workflow
 
-1. Install Xcode.
-2. Install Node and npm.
-3. Install CocoaPods if needed.
-4. Clone the repo into a no-space path.
-5. Run:
+### 1. Ask for work in GitHub
 
-```bash
-git clone https://github.com/ClawdGItMan/project-momentum ~/Projects/project-momentum
-cd ~/Projects/project-momentum
-npm install
-pod install --project-directory=ios
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer npx expo run:ios -d "iPhone 17 Pro" --no-install
-```
+Every new task starts as a GitHub issue using the `AI Task Request` form.
 
-## How To Share Demos Versus Code
+That form asks only:
 
-- For code collaboration: use the private GitHub repo.
-- For quick product demos: use the simulator path or send an internal iOS build later through EAS/TestFlight.
-- For real Apple Health validation: use a physical iPhone, not the simulator.
+- `What I want`
+- `Why it matters`
+- `What must not change`
+- `Done when`
 
-## Recommended Working Agreement
+### 2. Let AI turn it into a pull request
 
-1. One person owns product/UX slices and docs in a branch.
-2. One person owns app implementation or integration slices in a branch.
-3. Merge to `main` only after the flow runs in simulator.
-4. Keep `heartbeat.md`, `memory.md`, and `docs/ops/decision-log.md` updated whenever a real decision or build milestone happens.
+AI should:
+
+- read the issue
+- read the current repo context
+- do the work in a branch
+- update `heartbeat.md`, `memory.md`, and the decision log if needed
+- open a pull request with a plain-English handoff
+
+### 3. Review the pull request in GitHub
+
+The pull request should tell you:
+
+- what changed
+- what to check
+- what might break
+- screenshots or video if useful
+- whether it is ready to merge or needs Max to run a build check
+
+### 4. Merge the safe way
+
+Max merges to `main`.
+
+If the pull request touches iPhone build behavior, Apple Health, login, or integrations, Max does a quick build-owner check first.
+
+## What The Cofounder Does Not Need
+
+By default, the cofounder does not need:
+
+- a local clone
+- Xcode
+- CocoaPods
+- API keys
+- terminal commands
+- branches
+
+The cofounder should be able to work from GitHub on any computer.
+
+## Shared Home
+
+- Repo: `https://github.com/ClawdGItMan/project-momentum`
+- Pinned status thread: `Founder Dashboard`
+- Daily status automation: `Daily founder brief`
+
+## If You Need More Detail
+
+Use these only when needed:
+
+- `docs/ops/build-owner-checklist.md`
+- `docs/ops/collaboration-playbook.md`

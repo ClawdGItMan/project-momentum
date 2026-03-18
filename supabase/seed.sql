@@ -1,0 +1,4 @@
+-- Project Momentum local seed placeholder.
+-- Keep this file intentionally light until the app is using real auth users.
+-- After creating local users through Supabase Auth, add realistic squads, habits,
+-- and check-ins here if a richer local backend demo becomes necessary.

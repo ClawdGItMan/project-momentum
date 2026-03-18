@@ -36,10 +36,16 @@ yarn-error.*
 .tmp/
 
 # local env files
+.env
+.env.*
 .env*.local
+!.env.example
 
 # typescript
 *.tsbuildinfo
+
+# backend build output
+backend/dist/
 
 # native local artifacts
 ios/Pods/

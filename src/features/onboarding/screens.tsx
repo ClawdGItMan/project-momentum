@@ -7,7 +7,6 @@ import { theme } from "@/src/design";
 import {
   goalOptions,
   pillarOptions,
-  squadsSeed,
 } from "@/src/data/fixtures/appSeed";
 import { useMomentumSession } from "@/src/features/app/MomentumSessionProvider";
 import type {
@@ -109,6 +108,21 @@ function SelectableCard({
       <Text style={styles.selectableSubtitle}>{subtitle}</Text>
     </Pressable>
   );
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+
+  if (typeof error === "object" && error && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim().length > 0) {
+      return message;
+    }
+  }
+
+  return fallback;
 }
 
 export function WelcomeScreen() {
@@ -428,11 +442,17 @@ export function ConnectHealthScreen() {
           ? "Demo preview is active with seeded Apple Health-style metrics for a believable demo path."
           : "Apple Health is connected and the first proof bundle is available.";
       case "connected_limited":
-        return "Apple Health is connected, but one or more first-pass metrics still need coverage.";
+        return "Apple Health is connected. To unlock the full proof bundle, make sure the last 24 hours include steps, sleep, active energy, and a workout, then refresh.";
       case "needs_attention":
-        return "Permissions or coverage still need attention before the full proof layer is ready.";
+        return (
+          healthConnection.lastError ??
+          "Permissions or entitlements still need attention. Open the Health app, tap your profile, open Apps > Project Momentum, enable Workouts, Steps, Sleep, and Active Energy, then try again."
+        );
       case "unavailable":
-        return "This environment cannot complete the Apple Health path, so manual fallback is your safe bridge.";
+        return (
+          healthConnection.lastError ??
+          "This build cannot see the Apple Health bridge yet. Reinstall the iOS development build after updating native code and confirm the app target is signed with HealthKit enabled."
+        );
       case "error":
         return healthConnection.lastError ?? "The Apple Health bridge hit an unexpected error.";
       case "authorizing":
@@ -517,11 +537,7 @@ export function ConnectHealthScreen() {
         healthConnection.state === "error" ? (
           <ErrorState
             title="Apple Health still needs attention"
-            message={
-              healthConnection.state === "error"
-                ? statusCopy
-                : "That’s expected until the app runs in an iOS development build on a physical device. You can still keep the flow moving with manual fallback."
-            }
+            message={statusCopy}
           />
         ) : null}
         {manualFallbackEnabled ? (
@@ -574,7 +590,8 @@ export function ConnectHealthScreen() {
 
 export function SquadStepScreen() {
   const router = useRouter();
-  const { currentUser, setSelectedSquad } = useMomentumSession();
+  const { currentUser, setSelectedSquad, squads } = useMomentumSession();
+  const visibleSquads = squads;
 
   return (
     <StepShell
@@ -601,7 +618,17 @@ export function SquadStepScreen() {
       }
     >
       <View style={styles.stack}>
-        {squadsSeed.map((squad) => (
+        {!visibleSquads.length ? (
+          <Card
+            title="No squad yet"
+            subtitle="You can skip this for now and still finish onboarding. Live squad creation and invite acceptance are available in Connections after setup."
+          >
+            <Text style={styles.bodyCopy}>
+              This keeps the onboarding honest for founder alpha instead of filling the screen with seeded squads you do not actually belong to.
+            </Text>
+          </Card>
+        ) : null}
+        {visibleSquads.map((squad) => (
           <SelectableCard
             key={squad.id}
             title={squad.name}
@@ -625,8 +652,24 @@ export function RecapScreen() {
     healthPreviewActive,
     squads,
   } = useMomentumSession();
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const selectedSquad = squads.find((squad) => squad.id === currentUser.selectedSquadId);
+
+  const submit = async () => {
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      await completeOnboarding();
+      router.replace("/(app)/check-in");
+    } catch (error) {
+      setSubmitError(getErrorMessage(error, "Unable to finish onboarding."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <StepShell
@@ -638,10 +681,8 @@ export function RecapScreen() {
       footer={
         <Button
           label="Start first workout check-in"
-          onPress={() => {
-            completeOnboarding();
-            router.replace("/(app)/check-in");
-          }}
+          loading={submitting}
+          onPress={() => void submit()}
         />
       }
     >
@@ -659,6 +700,12 @@ export function RecapScreen() {
         </View>
       </Card>
       <ConsistencyCard consistency={consistency} compact />
+      {submitError ? (
+        <ErrorState
+          title="Setup still needs one fix"
+          message={submitError}
+        />
+      ) : null}
     </StepShell>
   );
 }

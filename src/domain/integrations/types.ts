@@ -57,6 +57,7 @@ export interface MetricValue {
 }
 
 export interface ProviderSnapshot {
+  id?: string;
   provider: IntegrationProvider;
   capturedAt: string;
   metrics: MetricValue[];
@@ -71,4 +72,3 @@ export interface ConnectionRecord {
   lastError?: string;
   coverage: MetricCoverage[];
 }
-

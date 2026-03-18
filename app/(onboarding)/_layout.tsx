@@ -3,10 +3,14 @@ import { Redirect, Stack } from "expo-router";
 import { useMomentumSession } from "@/src/features/app/MomentumSessionProvider";
 
 export default function OnboardingLayout() {
-  const { onboardingComplete, sessionHydrated } = useMomentumSession();
+  const { authReady, authState, onboardingComplete, sessionHydrated } = useMomentumSession();
 
-  if (!sessionHydrated) {
+  if (!sessionHydrated || !authReady) {
     return null;
+  }
+
+  if (authState === "signed-out") {
+    return <Redirect href={"/(auth)/sign-in" as never} />;
   }
 
   if (onboardingComplete) {

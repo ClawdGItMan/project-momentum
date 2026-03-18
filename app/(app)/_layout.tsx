@@ -4,10 +4,14 @@ import { theme } from "@/src/design";
 import { useMomentumSession } from "@/src/features/app/MomentumSessionProvider";
 
 export default function AppTabsLayout() {
-  const { onboardingComplete, sessionHydrated } = useMomentumSession();
+  const { authReady, authState, onboardingComplete, sessionHydrated } = useMomentumSession();
 
-  if (!sessionHydrated) {
+  if (!sessionHydrated || !authReady) {
     return null;
+  }
+
+  if (authState === "signed-out") {
+    return <Redirect href={"/(auth)/sign-in" as never} />;
   }
 
   if (!onboardingComplete) {
@@ -41,6 +45,12 @@ export default function AppTabsLayout() {
       <Tabs.Screen
         name="connections/index"
         options={{ title: "Connections" }}
+      />
+      <Tabs.Screen
+        name="squads/[squadId]"
+        options={{
+          href: null,
+        }}
       />
     </Tabs>
   );

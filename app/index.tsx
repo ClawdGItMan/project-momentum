@@ -3,10 +3,14 @@ import { Redirect } from "expo-router";
 import { useMomentumSession } from "@/src/features/app/MomentumSessionProvider";
 
 export default function IndexRoute() {
-  const { onboardingComplete, sessionHydrated } = useMomentumSession();
+  const { authReady, authState, onboardingComplete, sessionHydrated } = useMomentumSession();
 
-  if (!sessionHydrated) {
+  if (!sessionHydrated || !authReady) {
     return null;
+  }
+
+  if (authState === "signed-out") {
+    return <Redirect href={"/(auth)/sign-in" as never} />;
   }
 
   return (

@@ -18,6 +18,7 @@ import {
 export function HomeScreen() {
   const router = useRouter();
   const {
+    chatOverviews,
     consistency,
     currentUser,
     dismissPublishedCelebration,
@@ -34,6 +35,9 @@ export function HomeScreen() {
 
   const lastPublishedPost = feedPosts.find((post) => post.id === lastPublishedPostId);
   const selectedSquad = squads.find((squad) => squad.id === currentUser.selectedSquadId);
+  const selectedSquadChat = chatOverviews.find(
+    (overview) => overview.squadId === selectedSquad?.id,
+  );
   const visiblePosts = feedPosts.filter((post) =>
     homeSegment === "squads"
       ? selectedSquad
@@ -92,6 +96,34 @@ export function HomeScreen() {
             </Text>
           </View>
         </Card>
+
+        {selectedSquad ? (
+          <Card
+            title={`${selectedSquad.name} chat`}
+            subtitle={
+              selectedSquadChat?.lastMessagePreview
+                ? `${selectedSquadChat.lastMessageAuthorName ?? "Someone"}: ${selectedSquadChat.lastMessagePreview}`
+                : "One live room per squad, built for quick coordination and honest accountability."
+            }
+          >
+            <View style={styles.actions}>
+              <Text style={styles.bannerCopy}>
+                {selectedSquadChat?.unreadCount ?? 0} unread
+              </Text>
+              <Button
+                label="Open squad chat"
+                fullWidth={false}
+                variant="secondary"
+                onPress={() =>
+                  router.push({
+                    pathname: "/(app)/squads/[squadId]" as never,
+                    params: { squadId: selectedSquad.id },
+                  })
+                }
+              />
+            </View>
+          </Card>
+        ) : null}
 
         <ConsistencyCard consistency={consistency} compact />
 

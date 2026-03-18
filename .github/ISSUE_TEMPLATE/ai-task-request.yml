@@ -1,0 +1,46 @@
+name: AI Task Request
+description: Ask AI to do work on Project Momentum in plain English.
+title: "[AI Task]: "
+labels:
+  - ready-for-ai
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use plain English. Keep it simple. AI will use this as the starting brief.
+
+  - type: textarea
+    id: what_i_want
+    attributes:
+      label: What I want
+      description: Say what you want AI to do.
+      placeholder: Make the profile feel more premium and easier to understand.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why_it_matters
+    attributes:
+      label: Why it matters
+      description: Say why this matters right now.
+      placeholder: We need the profile to feel stronger before demos.
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_must_not_change
+    attributes:
+      label: What must not change
+      description: Say what AI should protect.
+      placeholder: Do not change the private social model or the current onboarding flow.
+    validations:
+      required: true
+
+  - type: textarea
+    id: done_when
+    attributes:
+      label: Done when
+      description: Say what success looks like.
+      placeholder: I can review a pull request and immediately understand what improved.
+    validations:
+      required: true
