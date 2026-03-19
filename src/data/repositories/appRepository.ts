@@ -155,6 +155,10 @@ type SquadInviteRow = {
   invite_token: string;
 };
 
+type JoinOnboardingSquadRow = {
+  id: string;
+};
+
 type CheckInMetricInput = {
   key: string;
   value: number | string | boolean | null;
@@ -265,7 +269,7 @@ function mapSquad(row: SquadOverviewRow): Squad {
   };
 }
 
-function mapPost(row: FeedItemRow): ProgressPost {
+function mapPost(row: FeedItemRow, currentUserId?: string): ProgressPost {
   return {
     id: row.id,
     authorId: row.author_id,
@@ -291,6 +295,7 @@ function mapPost(row: FeedItemRow): ProgressPost {
       commentCount: row.comment_count ?? 0,
       emojis: row.emojis ?? [],
     },
+    isCurrentUser: currentUserId ? row.author_id === currentUserId : undefined,
   };
 }
 
@@ -531,7 +536,7 @@ export async function fetchAppBootstrapData(userId: string): Promise<AppBootstra
     })),
     squads: (squadsResult.data ?? []).map((row) => mapSquad(row as SquadOverviewRow)),
     habits: (habitsResult.data ?? []).map((row) => mapHabit(row as HabitOverviewRow)),
-    feedPosts: (feedResult.data ?? []).map((row) => mapPost(row as FeedItemRow)),
+    feedPosts: (feedResult.data ?? []).map((row) => mapPost(row as FeedItemRow, userId)),
     healthConnection: mapConnection(connectionResult.data ?? null),
     healthSnapshot: mapSnapshot(snapshotResult.data ?? null),
     consistency,
@@ -594,6 +599,28 @@ export async function setSelectedSquad(selectedSquadId?: string) {
   });
 
   if (error) throw error;
+}
+
+export async function joinDayOnesSquad() {
+  const { data, error } = await supabase.rpc("join_onboarding_squad", {
+    p_name: "Day ones",
+    p_handle: "day-ones",
+    p_description:
+      "A starter squad for people who want to build momentum from the beginning.",
+    p_current_focus: "Show up, check in, and keep each other moving.",
+  });
+
+  if (error) throw error;
+
+  const row = (Array.isArray(data) ? data[0] : data) as JoinOnboardingSquadRow | null;
+
+  if (!row?.id) {
+    throw new Error("Unable to join Day ones.");
+  }
+
+  return {
+    squadId: row.id,
+  };
 }
 
 export async function createFriendInviteByUsername(username: string, message?: string) {
@@ -748,6 +775,7 @@ export async function createCheckIn(payload: {
   sourceSnapshotId?: string;
   metrics: CheckInMetricInput[];
 }) {
+  const userId = await requireAuthenticatedUserId();
   const { data, error } = await supabase.rpc("create_check_in", {
     p_type: payload.type,
     p_audience: payload.audience,
@@ -760,7 +788,7 @@ export async function createCheckIn(payload: {
 
   if (error) throw error;
 
-  return mapPost((Array.isArray(data) ? data[0] : data) as FeedItemRow);
+  return mapPost((Array.isArray(data) ? data[0] : data) as FeedItemRow, userId);
 }
 
 export async function fetchSquadMessages(squadId: string): Promise<SquadMessageItem[]> {

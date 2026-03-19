@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useEffectEvent, useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
@@ -22,6 +22,7 @@ export function SquadChatScreen() {
     squads,
   } = useMomentumSession();
   const [message, setMessage] = useState("");
+  const [roomError, setRoomError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
 
   const squad = useMemo(
@@ -34,14 +35,32 @@ export function SquadChatScreen() {
   );
   const messages = squadId ? squadMessages[squadId] ?? [] : [];
 
+  const syncSquadChat = useEffectEvent(async (targetSquadId: string) => {
+    setRoomError(null);
+
+    try {
+      await openSquadChat(targetSquadId);
+    } catch (error) {
+      setRoomError(error instanceof Error ? error.message : "Unable to load squad chat.");
+    }
+  });
+
+  const closeSquadChat = useEffectEvent(async (targetSquadId: string) => {
+    try {
+      await markSquadChatRead(targetSquadId);
+    } catch {
+      // Keep back navigation resilient even if the read receipt cannot sync.
+    }
+  });
+
   useEffect(() => {
     if (!squadId) return;
 
-    void openSquadChat(squadId);
+    void syncSquadChat(squadId);
     return () => {
-      void markSquadChatRead(squadId);
+      void closeSquadChat(squadId);
     };
-  }, [markSquadChatRead, openSquadChat, squadId]);
+  }, [squadId]);
 
   const submit = async () => {
     if (!squadId || !message.trim()) return;
@@ -55,14 +74,23 @@ export function SquadChatScreen() {
     }
   };
 
+  const goBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace("/(app)/squads");
+  };
+
   if (!squadId || !squad) {
     return (
       <ScrollScreen>
         <ErrorState
           title="Squad chat not found"
           message="This room only exists for squads you currently belong to."
-          actionLabel="Back to connections"
-          onRetry={() => router.replace("/(app)/connections")}
+          actionLabel="Back to squads"
+          onRetry={() => router.replace("/(app)/squads")}
         />
       </ScrollScreen>
     );
@@ -84,7 +112,7 @@ export function SquadChatScreen() {
           label="Back"
           variant="ghost"
           fullWidth={false}
-          onPress={() => router.back()}
+          onPress={goBack}
         />
       </View>
 
@@ -98,18 +126,27 @@ export function SquadChatScreen() {
           {activeSquadChatId === squadId ? <Badge label="Live" tone="success" /> : null}
         </View>
         <Text style={styles.helper}>
-          Messages from before you joined are intentionally hidden in this founder-alpha build.
+          Chat stays focused on the people and momentum in this squad right now.
         </Text>
       </Card>
 
       <View style={styles.messages}>
-        {chatLoading && !messages.length ? (
+        {roomError ? (
+          <ErrorState
+            title="Unable to load squad chat"
+            message={roomError}
+            actionLabel="Back to squads"
+            onRetry={() => router.replace("/(app)/squads")}
+          />
+        ) : null}
+
+        {chatLoading && !messages.length && !roomError ? (
           <Card subtitle="Loading the room">
             <Text style={styles.helper}>Pulling the current squad thread from Supabase.</Text>
           </Card>
         ) : null}
 
-        {!chatLoading && !messages.length ? (
+        {!chatLoading && !messages.length && !roomError ? (
           <EmptyState
             title="Start the room with something honest"
             message="The first message should feel like a quick pulse, not a performance."

@@ -11,7 +11,7 @@ export default function AudienceSelectorModal() {
         <Card title="Only me" subtitle="Private rehearsal space.">
           <Text style={styles.body}>Use this when you want a logged proof point without sharing it outward.</Text>
         </Card>
-        <Card title="Friends" subtitle="Default for workouts and habits in v0.1.">
+        <Card title="Friends" subtitle="Great for your close accountability circle.">
           <Text style={styles.body}>Mutual friends see the update by default because it keeps the loop intimate and simple.</Text>
         </Card>
         <Card title="Specific squad" subtitle="The tighter accountability surface.">

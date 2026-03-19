@@ -2,7 +2,7 @@
 
 ## Product Idea
 
-Project Momentum is a social self-improvement app where people share progress, stay accountable, and build identity around getting better. It combines progress tracking, simple social mechanics, and selective integrations into one place that feels more constructive than mainstream social media and more motivating than a private tracker.
+Outtcast is a social self-improvement app where people share progress, stay accountable, and build identity around getting better. It combines progress tracking, simple social mechanics, and selective integrations into one place that feels more constructive than mainstream social media and more motivating than a private tracker.
 
 ## Core Promise
 

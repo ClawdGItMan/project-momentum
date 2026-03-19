@@ -143,6 +143,9 @@ export class AppleHealthAdapter implements HealthProviderAdapter {
       .map((key) => {
         const metric = result[key];
         if (!metric || metric.value == null) return null;
+        const explicitAvailability =
+          typeof metric.available === "boolean" ? metric.available : true;
+        if (!explicitAvailability) return null;
         return normalizeMetricValue(this.provider, targetWindow, {
           key,
           value: metric.value,

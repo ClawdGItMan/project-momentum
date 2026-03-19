@@ -7,7 +7,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>Project Momentum</string>
+    <string>Outtcast</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -56,7 +56,7 @@
       <string>_expo._tcp</string>
     </array>
     <key>NSHealthShareUsageDescription</key>
-    <string>Project Momentum uses Apple Health to bring workouts, sleep, steps, and active energy into your accountability flow.</string>
+    <string>Outtcast uses Apple Health to bring workouts, sleep, steps, and active energy into your accountability flow.</string>
     <key>NSLocalNetworkUsageDescription</key>
     <string>Expo Dev Launcher uses the local network to discover and connect to development servers running on your computer.</string>
     <key>NSUserActivityTypes</key>

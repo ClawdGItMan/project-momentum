@@ -78,7 +78,7 @@ Week 1 moving into founder-alpha integration: the first vertical slice is now ba
 - a hosted Supabase project linked to the repo with the Phase 0 schema applied and local backend health checks passing
 - a founder-friendly GitHub issue, PR, and dashboard workflow that lets AI do most of the work
 - a Phase 1 founder-alpha mobile path with real auth, backend-backed profile/feed/provider state, persisted check-ins, and live squad chat
-- a founder-alpha Connections surface that can send exact-username friend invites, let users create their own squad, invite existing friends into owned squads, generate and display redeemable invite tokens, and accept friend or squad invite tokens without leaving the app
+- a founder-alpha Squads surface that can send exact-username friend invites, let users create their own squad, invite existing friends into owned squads, generate and display redeemable invite tokens, and accept friend or squad invite tokens without leaving the app
 - clearer go/no-go view for week two
 
 ## Exit Criteria

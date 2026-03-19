@@ -6,7 +6,7 @@
 - Post / Check-In
 - Habits
 - Profile
-- Connections
+- Squads
 
 ## Auth Screens
 
@@ -23,7 +23,7 @@
 4. Share preference and accountability prompt
 5. Profile basics
 6. Apple Health connection with manual fallback
-7. Squad choice with live memberships only, skippable if none yet
+7. Squad choice with a featured `Day ones` starter squad plus any live memberships, still skippable
 8. Onboarding recap
 
 ## Core Authenticated Screens
@@ -60,18 +60,18 @@
 - badge or milestone area
 - selected audience and privacy cues
 
-### Connections
+### Squads
 
-- friends
 - squads and squad invites
+- selected squad state
+- squad chat entry points from squad rows
 - exact-username friend invite
 - create-your-own-squad flow
 - owned-squad invite surface for existing friends
 - generated friend and squad invite tokens as fallback handoff
-- squad creation
 - invite token acceptance
-- provider connection and refresh controls
-- squad chat entry points from squad rows
+- friends list as supporting private-graph setup
+- provider connection and refresh controls as supporting recovery tools
 
 ### Squad Chat
 
@@ -79,7 +79,7 @@
 - text-only messages
 - unread counts and last-message preview
 - join-forward history rule
-- entry from selected squad on Home and from squad rows in Connections
+- entry from selected squad on Home and from squad rows in Squads
 
 ## Supporting Screens
 
@@ -99,6 +99,6 @@ Build priority should be:
 2. auth and onboarding persistence
 3. post flow
 4. feed
-5. connections plus squad chat
+5. squads plus squad chat
 6. habits
 7. profile

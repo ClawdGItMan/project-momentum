@@ -42,9 +42,12 @@ export default function AppTabsLayout() {
       <Tabs.Screen name="check-in/index" options={{ title: "Check in" }} />
       <Tabs.Screen name="habits/index" options={{ title: "Habits" }} />
       <Tabs.Screen name="profile/index" options={{ title: "Profile" }} />
+      <Tabs.Screen name="squads/index" options={{ title: "Squads" }} />
       <Tabs.Screen
         name="connections/index"
-        options={{ title: "Connections" }}
+        options={{
+          href: null,
+        }}
       />
       <Tabs.Screen
         name="squads/[squadId]"

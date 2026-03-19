@@ -66,6 +66,16 @@ export const squadsSeed: Squad[] = [
   },
 ];
 
+export const dayOnesSquadSeed: Squad = {
+  id: "squad-day-ones",
+  ownerId: "friend-1",
+  name: "Day ones",
+  handle: "day-ones",
+  description: "A starter squad for people who want to build momentum from the beginning.",
+  memberCount: 12,
+  currentFocus: "Show up, check in, and keep each other moving.",
+};
+
 export const habitsSeed: Habit[] = [
   {
     id: "habit-1",

@@ -17,6 +17,19 @@ export function ProgressPostCard({
   onDidThisToo,
   showActions = true,
 }: ProgressPostCardProps) {
+  const audienceLabel =
+    post.audience === "squad"
+      ? post.squadName ?? "Squad"
+      : post.audience === "only-me"
+        ? "Only me"
+        : "Friends";
+  const visibilityCopy =
+    post.audience === "squad"
+      ? `Visible in ${post.squadName ?? "your squad"}.`
+      : post.audience === "only-me"
+        ? "Visible only to you."
+        : "Visible in your trusted accountability lane.";
+
   return (
     <Card elevated style={styles.card}>
       <View style={styles.header}>
@@ -27,7 +40,7 @@ export function ProgressPostCard({
           </Text>
         </View>
         <Badge
-          label={post.audience === "squad" ? post.squadName ?? "Squad" : "Friends"}
+          label={audienceLabel}
           tone={post.audience === "squad" ? "accent" : "neutral"}
         />
       </View>
@@ -52,7 +65,7 @@ export function ProgressPostCard({
           <Text style={styles.emojiRow}>{post.reactions.emojis.join(" ")}</Text>
         ) : null}
         {!showActions ? null : post.isCurrentUser ? (
-          <Text style={styles.footerText}>Visible in your trusted accountability lane.</Text>
+          <Text style={styles.footerText}>{visibilityCopy}</Text>
         ) : (
           <View style={styles.actions}>
             <Button

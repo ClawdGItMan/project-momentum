@@ -1,6 +1,6 @@
 # Project Momentum Founder OS
 
-Project Momentum is the temporary codename for a social self-improvement app designed to make progress visible, social, and culturally aspirational. This workspace now contains both the founder operating system and the first Expo / React Native MVP scaffold for a two-founder, iPhone-first sprint.
+Project Momentum is the internal workspace codename for Outtcast, a social self-improvement app designed to make progress visible, social, and culturally aspirational. This workspace now contains both the founder operating system and the first Expo / React Native MVP scaffold for a two-founder, iPhone-first sprint.
 
 ## Current Sprint Objective
 
@@ -30,7 +30,7 @@ The repo now includes a real Expo Router app shell:
 - `app/`: onboarding routes, authenticated tabs, and modal routes
 - `src/design`: semantic tokens, typography, motion, and theme
 - `src/ui/primitives`: shared React Native building blocks
-- `src/features`: onboarding, feed, composer, profile, habits, and connections
+- `src/features`: onboarding, feed, composer, profile, habits, and the squads surface
 - `src/domain` and `src/data`: consistency logic, provider adapters, fixtures, and repositories
 - `ios/`: generated iOS native project from `expo prebuild` with HealthKit entitlement wiring
 

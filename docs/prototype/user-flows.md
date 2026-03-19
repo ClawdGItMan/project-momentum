@@ -45,7 +45,7 @@ Create a visible identity centered on growth, not vanity.
 1. User picks username and short mission line.
 2. User chooses visible focus areas.
 3. User connects Apple Health or falls back to manual setup only if needed.
-4. User optionally selects a live squad they already belong to, or skips.
+4. User can join the starter squad `Day ones`, pick another live squad they already belong to, or skip.
 5. User completes the backend onboarding bootstrap and previews how their profile momentum board and consistency status will look.
 
 ### Success Outcome
@@ -118,7 +118,7 @@ Give each squad a lightweight real-time room for coordination and encouragement 
 
 ### Steps
 
-1. User opens a squad from Home or Connections.
+1. User opens a squad from Home or Squads.
 2. App loads only the join-forward message history visible to that member from Supabase and subscribes to realtime inserts.
 3. User sends a short text message into the squad room.
 4. Other active squad members see the new message live.

@@ -27,7 +27,7 @@ export default function MetricDetailModal() {
           ))}
         </Card>
         {healthSnapshot?.metrics.length ? (
-          <Card subtitle="Normalized locally from the Apple Health boundary or manual fallback.">
+          <Card subtitle="Synced from Apple Health or added manually when needed.">
             {healthSnapshot.metrics.map((metric) => (
               <StatRow
                 key={metric.key}
@@ -40,7 +40,7 @@ export default function MetricDetailModal() {
         ) : (
           <EmptyState
             title="No metrics attached yet"
-            message="Connect Apple Health or use manual fallback in the composer to populate this detail view."
+            message="Connect Apple Health or add a manual check-in to populate this detail view."
           />
         )}
       </View>

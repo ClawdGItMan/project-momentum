@@ -25,6 +25,21 @@ import {
   TextField,
 } from "@/src/ui/primitives";
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+
+  if (typeof error === "object" && error && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim().length > 0) {
+      return message;
+    }
+  }
+
+  return fallback;
+}
+
 export function CheckInScreen() {
   const router = useRouter();
   const {
@@ -33,7 +48,6 @@ export function CheckInScreen() {
     currentUser,
     healthConnection,
     healthLoading,
-    healthPreviewActive,
     healthSnapshot,
     manualFallbackEnabled,
     publishCheckIn,
@@ -154,9 +168,7 @@ export function CheckInScreen() {
       router.replace("/(app)/home");
     } catch (error) {
       setSubmitError(
-        error instanceof Error
-          ? error.message
-          : "The check-in needs more detail before it can publish.",
+        getErrorMessage(error, "The check-in needs more detail before it can publish."),
       );
     } finally {
       setPublishing(false);
@@ -170,8 +182,7 @@ export function CheckInScreen() {
           <View style={styles.headerCopy}>
             <Text style={styles.title}>First check-in</Text>
             <Text style={styles.subtitle}>
-              The fastest believable loop is one workout, one audience, one clean
-              publish.
+              Share the work while it is still fresh.
             </Text>
           </View>
           <Badge label="Under 30 sec" tone="accent" />
@@ -206,14 +217,12 @@ export function CheckInScreen() {
                   : "warning"
               }
             />
-            {healthPreviewActive ? <Badge label="Demo preview" tone="accent" /> : null}
             {manualFallbackEnabled ? (
-              <Badge label="Manual fallback" tone="warning" />
+              <Badge label="Manual entry" tone="warning" />
             ) : null}
           </View>
           <Text style={styles.helper}>
-            Keep the copy short and let the proof carry the post. The first demo should
-            feel intentional, not overproduced.
+            Keep the caption short and let the activity speak for itself.
           </Text>
         </Card>
 
@@ -310,7 +319,7 @@ export function CheckInScreen() {
             {checkInDraft.audience === "squad" && selectedSquad
               ? `Posting into ${selectedSquad.name}.`
               : squadAvailable
-                ? "Workouts and habits default to Friends in v0.1."
+                ? "Workouts and habits start with Friends."
                 : "Pick a squad during onboarding if you want the tighter accountability lane."}
           </Text>
           <Button
@@ -323,7 +332,7 @@ export function CheckInScreen() {
 
         <Card
           title="Post preview"
-          subtitle="The first shared card should feel credible before you publish."
+          subtitle="Make sure the update feels clear before you publish."
         >
           <ProgressPostCard post={previewPost} showActions={false} />
         </Card>

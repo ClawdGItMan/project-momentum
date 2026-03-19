@@ -1,9 +1,10 @@
 import React from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import { theme } from "@/src/design";
 import { useMomentumSession } from "@/src/features/app/MomentumSessionProvider";
+import { HiddenDevToolsTrigger } from "@/src/features/dev/HiddenDevToolsTrigger";
 import { formatConnectionState, formatMetricLabel } from "@/src/lib/formatters";
 import { ConsistencyCard } from "@/src/ui/composites/ConsistencyCard";
 import { ProgressPostCard } from "@/src/ui/composites/ProgressPostCard";
@@ -25,28 +26,21 @@ export function ProfileScreen() {
     currentUser,
     feedPosts,
     healthConnection,
-    healthPreviewActive,
     healthSnapshot,
-    resetDemoSession,
     signOut,
   } = useMomentumSession();
 
   const myPosts = feedPosts.filter((post) => post.authorId === currentUser.id);
-  const showDemoControls = __DEV__ || Platform.OS === "web";
 
   return (
     <ScrollScreen contentContainerStyle={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerCopy}>
+        <HiddenDevToolsTrigger style={styles.headerCopy}>
           <Text style={styles.name}>{currentUser.name}</Text>
           <Text style={styles.username}>@{currentUser.username}</Text>
-        </View>
+        </HiddenDevToolsTrigger>
         <View style={styles.wrap}>
           <Badge label={formatConnectionState(healthConnection.state)} tone="accent" />
-          {healthPreviewActive ? <Badge label="Demo preview" tone="accent" /> : null}
-          {authState === "authenticated" ? (
-            <Badge label="Live account" tone="success" />
-          ) : null}
         </View>
       </View>
 
@@ -84,8 +78,8 @@ export function ProfileScreen() {
           subtitle={`Apple Health status: ${formatConnectionState(healthConnection.state)}`}
         >
           <Text style={styles.supportingCopy}>
-            Apple Health is the main proof layer in v0.1. Manual entry only steps in
-            when coverage or connection falls short.
+            Apple Health keeps this profile grounded in the work you are
+            actually doing. Manual entry stays available when sync is not ready.
           </Text>
           {(healthSnapshot?.metrics ?? []).length ? (
             <View style={styles.wrap}>
@@ -101,9 +95,9 @@ export function ProfileScreen() {
           ) : (
             <EmptyState
               title="No live metrics attached yet"
-              message="The profile still works for demoing identity and consistency, but stronger proof appears after a health sync or a published fallback check-in."
+              message="Your mission, pillars, and consistency are already here. Sync health or publish a manual check-in to add activity details."
               actionLabel="Manage health state"
-              onActionPress={() => router.push("/(app)/connections")}
+              onActionPress={() => router.push("/(app)/squads")}
             />
           )}
         </Card>
@@ -134,17 +128,6 @@ export function ProfileScreen() {
           />
         )}
       </View>
-
-      {showDemoControls ? (
-        <Card title="Demo controls" subtitle="Quick reset for repeated walkthroughs.">
-          <Button
-            label="Reset demo session"
-            variant="secondary"
-            fullWidth={false}
-            onPress={() => void resetDemoSession()}
-          />
-        </Card>
-      ) : null}
 
       {authState === "authenticated" ? (
         <Card title="Account">

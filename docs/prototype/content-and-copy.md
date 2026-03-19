@@ -11,6 +11,18 @@
 
 The app should sound like a place where disciplined people support each other, not like a motivational poster generator.
 
+## Brand
+
+- visible app brand: `Outtcast`
+- internal workspace codename: `Project Momentum`
+
+## App-Facing Guardrails
+
+- app-facing screens should never mention prototype stage, MVP stage, founder alpha, demo realism, or internal validation goals
+- do not explain what the build proves inside the product
+- do not call out whether accounts, metrics, or squads are "real"; users should only see the product value
+- dev-only controls and sample-state tools should stay behind hidden development access, not visible product UI
+
 ## Suggested Core Language
 
 - momentum
@@ -39,7 +51,7 @@ These words may be useful in specific contexts, but they can become cringe or ex
 
 ### Thesis
 
-"Project Momentum is where progress gets social."
+"Outtcast is where progress gets social."
 
 ### Goal selection prompt
 

@@ -11,11 +11,12 @@ import { AppleHealthAdapter, type AppleHealthBridge } from "@/src/data/adapters/
 import { ManualEntryAdapter } from "@/src/data/adapters/manualEntry";
 import { StravaAdapter } from "@/src/data/adapters/strava";
 
-export const demoMetricWindow: MetricWindow = createWindow(
+export const getDemoMetricWindow = (): MetricWindow =>
+  createWindow(
   new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
   new Date().toISOString(),
   "today",
-);
+  );
 
 type HealthModule = {
   Constants: {
@@ -325,7 +326,7 @@ export const connectAppleHealth = async (options?: {
   const connection = await adapter.connect();
 
   if (connection.state === "connected" || connection.state === "connected_limited") {
-    const snapshot = await adapter.refresh(demoMetricWindow);
+    const snapshot = await adapter.refresh(getDemoMetricWindow());
     return { connection, snapshot };
   }
 
@@ -350,5 +351,5 @@ export const seedManualWorkoutFallback = async (options: {
     unit: "count",
   });
 
-  return manualEntryAdapter.refresh(demoMetricWindow);
+  return manualEntryAdapter.refresh(getDemoMetricWindow());
 };

@@ -21,6 +21,7 @@ import {
   appleHealthPreviewSnapshot,
   checkInDraftSeed,
   consistencySeed,
+  dayOnesSquadSeed,
   friendsSeed,
   habitsSeed,
   onboardingDraftSeed,
@@ -35,6 +36,7 @@ import {
   createCheckIn,
   createSquad as persistCreateSquad,
   createSquadInviteToken as persistCreateSquadInviteToken,
+  joinDayOnesSquad as persistJoinDayOnesSquad,
   fetchAppBootstrapData,
   fetchSquadMessages,
   markSquadChatRead as persistSquadChatRead,
@@ -54,7 +56,7 @@ import {
 } from "@/src/data/repositories/appRepository";
 import {
   connectAppleHealth,
-  demoMetricWindow,
+  getDemoMetricWindow,
   seedManualWorkoutFallback,
 } from "@/src/data/repositories/healthRepository";
 import { supabase, ensureSupabaseSessionRefresh } from "@/src/lib/supabase/client";
@@ -124,6 +126,7 @@ type MomentumSessionValue = {
   toggleHabit: (habitId: string) => Promise<void>;
   addHabit: (title?: string) => Promise<void>;
   refreshFromBackend: () => Promise<void>;
+  joinDayOnesSquad: () => Promise<string>;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (
     email: string,
@@ -213,6 +216,54 @@ const createMessageId = () =>
   });
 
 const createInviteToken = () => createMessageId().replace(/-/g, "");
+
+function getNextHabitTitle(existingHabits: Habit[], title?: string) {
+  const requestedTitle = title?.trim();
+  if (requestedTitle) {
+    return requestedTitle;
+  }
+
+  const usedTitles = new Set(
+    existingHabits.map((habit) => habit.title.trim().toLowerCase()),
+  );
+  const suggestedTitle = habitPool.find(
+    (candidate) => !usedTitles.has(candidate.toLowerCase()),
+  );
+
+  if (suggestedTitle) {
+    return suggestedTitle;
+  }
+
+  let fallbackIndex = Math.max(existingHabits.length + 1, 1);
+  let fallbackTitle = `Extra consistency habit ${fallbackIndex}`;
+
+  while (usedTitles.has(fallbackTitle.toLowerCase())) {
+    fallbackIndex += 1;
+    fallbackTitle = `Extra consistency habit ${fallbackIndex}`;
+  }
+
+  return fallbackTitle;
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+
+  if (typeof error === "object" && error) {
+    const message = "message" in error ? (error as { message?: unknown }).message : undefined;
+    if (typeof message === "string" && message.trim().length > 0) {
+      const details = "details" in error ? (error as { details?: unknown }).details : undefined;
+      const hint = "hint" in error ? (error as { hint?: unknown }).hint : undefined;
+      const extras = [details, hint].filter(
+        (value): value is string => typeof value === "string" && value.trim().length > 0,
+      );
+      return extras.length ? `${message} (${extras.join(" ")})` : message;
+    }
+  }
+
+  return fallback;
+}
 
 function sameChatMessage(left: SquadMessage, right: SquadMessage) {
   if (left.id === right.id) return true;
@@ -581,6 +632,53 @@ export function MomentumSessionProvider({
     }
   };
 
+  const joinDayOnesSquad = async () => {
+    if (authState === "demo") {
+      const existingSquad = squads.find((squad) => squad.handle === dayOnesSquadSeed.handle);
+      const nextSquad = existingSquad ?? dayOnesSquadSeed;
+
+      if (!existingSquad) {
+        setSquads((current) => [dayOnesSquadSeed, ...current]);
+        setChatOverviews((current) =>
+          current.some((overview) => overview.squadId === dayOnesSquadSeed.id)
+            ? current
+            : [
+                {
+                  squadId: dayOnesSquadSeed.id,
+                  unreadCount: 0,
+                  lastMessageAt: new Date().toISOString(),
+                  lastMessagePreview: "Welcome to Day ones. Keep each other moving.",
+                  lastMessageAuthorName: "Day ones",
+                },
+                ...current,
+              ],
+        );
+      }
+
+      setOnboardingDraft((current) => ({
+        ...current,
+        selectedSquadId: nextSquad.id,
+      }));
+      setCurrentUser((current) => ({
+        ...current,
+        selectedSquadId: nextSquad.id,
+      }));
+      setCheckInDraft((current) => ({
+        ...current,
+        squadId: nextSquad.id,
+      }));
+
+      return nextSquad.id;
+    }
+
+    const { squadId } = await persistJoinDayOnesSquad();
+    await refreshFromBackend();
+    setOnboardingDraft((current) => ({ ...current, selectedSquadId: squadId }));
+    setCurrentUser((current) => ({ ...current, selectedSquadId: squadId }));
+    setCheckInDraft((current) => ({ ...current, squadId }));
+    return squadId;
+  };
+
   const connectHealth = async (options?: { preview?: boolean }) => {
     setHealthLoading(true);
 
@@ -599,30 +697,48 @@ export function MomentumSessionProvider({
         (result.connection.state === "connected" ||
           result.connection.state === "connected_limited")
       ) {
-        const persistedSnapshot = await recordAppleHealthSnapshot({
-          state: result.connection.state,
-          windowStartAt: demoMetricWindow.startAt,
-          windowEndAt: demoMetricWindow.endAt,
-          windowBucket: demoMetricWindow.bucket,
-          metrics: snapshot.metrics.map((metric) => ({
-            key: metric.key,
-            value: metric.value,
-            unit: metric.unit,
-            source: metric.source,
-            observedAt: metric.observedAt,
-            confidence: metric.confidence,
-          })),
-          coverage: snapshot.coverage.map((item) => ({
-            key: item.key,
-            available: item.available,
-            reason: item.reason,
-          })),
-        });
-        if (persistedSnapshot) {
-          snapshot = persistedSnapshot;
-          setHealthSnapshot(persistedSnapshot);
+        try {
+          const metricWindow = getDemoMetricWindow();
+          const persistedSnapshot = await recordAppleHealthSnapshot({
+            state: result.connection.state,
+            windowStartAt: metricWindow.startAt,
+            windowEndAt: metricWindow.endAt,
+            windowBucket: metricWindow.bucket,
+            metrics: snapshot.metrics.map((metric) => ({
+              key: metric.key,
+              value: metric.value,
+              unit: metric.unit,
+              source: metric.source,
+              observedAt: metric.observedAt,
+              confidence: metric.confidence,
+            })),
+            coverage: snapshot.coverage.map((item) => ({
+              key: item.key,
+              available: item.available,
+              reason: item.reason,
+            })),
+          });
+          if (persistedSnapshot?.id) {
+            snapshot = persistedSnapshot;
+            setHealthSnapshot(persistedSnapshot);
+          }
+          await refreshFromBackend();
+        } catch (error) {
+          const message = getErrorMessage(
+            error,
+            "Connected to Apple Health, but we could not save your latest summary yet.",
+          );
+          console.warn("Apple Health persistence failed", error);
+          const nextConnection = {
+            ...normalizePersistedConnection(result.connection),
+            lastError: message,
+          };
+          setHealthConnection(nextConnection);
+          return {
+            connection: nextConnection,
+            snapshot,
+          };
         }
-        await refreshFromBackend();
       }
 
       return {
@@ -630,11 +746,14 @@ export function MomentumSessionProvider({
         snapshot,
       };
     } catch (error) {
+      console.warn("Apple Health sync failed", error);
       setHealthConnection((current) => ({
         ...normalizePersistedConnection(current),
         state: "error",
-        lastError:
-          error instanceof Error ? error.message : "Unable to connect Apple Health.",
+        lastError: getErrorMessage(
+          error,
+          "Unable to connect Apple Health.",
+        ),
       }));
       throw error;
     } finally {
@@ -699,6 +818,12 @@ export function MomentumSessionProvider({
     const normalizedDraftSelection = normalizeCheckInDraftSelection(checkInDraft, squads);
     const effectiveAudience = normalizedDraftSelection.audience;
     const effectiveSquadId = normalizedDraftSelection.squadId;
+    const manualWorkoutName = checkInDraft.manualWorkoutName.trim();
+    const durationMinutes = Number(checkInDraft.manualDurationMinutes);
+    const activeEnergy = Number(checkInDraft.manualEnergy);
+    const hasManualWorkoutDetails =
+      Boolean(manualWorkoutName) && durationMinutes > 0 && activeEnergy > 0;
+    let usingManualWorkoutFallback = manualFallbackEnabled;
 
     if (
       effectiveAudience !== checkInDraft.audience ||
@@ -714,37 +839,33 @@ export function MomentumSessionProvider({
     let metrics = snapshot?.metrics ?? [];
 
     if (
+      checkInDraft.type === "workout" &&
       authState === "authenticated" &&
       !manualFallbackEnabled &&
       !healthPreviewActive &&
-      !metrics.length
+      !metrics.length &&
+      !hasManualWorkoutDetails
     ) {
       const connected = await connectHealth();
       snapshot = connected.snapshot;
       metrics = snapshot?.metrics ?? [];
     }
 
-    if (!metrics.length || manualFallbackEnabled) {
-      const manualWorkoutName = checkInDraft.manualWorkoutName.trim();
-      const durationMinutes = Number(checkInDraft.manualDurationMinutes);
-      const activeEnergy = Number(checkInDraft.manualEnergy);
-
-      if (
-        checkInDraft.type === "workout" &&
-        (!manualWorkoutName || durationMinutes <= 0 || activeEnergy <= 0)
-      ) {
+    if (checkInDraft.type === "workout" && (manualFallbackEnabled || !metrics.length)) {
+      if (!hasManualWorkoutDetails) {
         throw new Error(
           "Manual fallback needs a workout name, duration, and active energy before you can publish.",
         );
       }
 
+      usingManualWorkoutFallback = true;
       snapshot = await seedManualWorkoutFallback({
-        workoutName: manualWorkoutName || "Workout",
+        workoutName: manualWorkoutName,
         durationMinutes,
         activeEnergy,
       });
       metrics = snapshot.metrics;
-      setHealthSnapshot((current) => current ?? snapshot);
+      setHealthSnapshot(snapshot);
     }
 
     if (authState === "demo") {
@@ -781,21 +902,26 @@ export function MomentumSessionProvider({
       };
       setFeedPosts((current) => [nextPost, ...current]);
       setLastPublishedPostId(nextPost.id);
+      setCheckInDraft((current) => ({ ...current, caption: "" }));
       return nextPost;
     }
+
+    const sourceProvider = usingManualWorkoutFallback
+      ? "manual"
+      : healthPreviewActive
+        ? "mock"
+        : metrics.length
+          ? "apple-health"
+          : "manual";
 
     const createdPost = await createCheckIn({
       type: checkInDraft.type,
       audience: effectiveAudience,
       squadId: effectiveAudience === "squad" ? effectiveSquadId : undefined,
       caption: checkInDraft.caption,
-      sourceProvider: manualFallbackEnabled
-        ? "manual"
-        : healthPreviewActive
-          ? "mock"
-          : "apple-health",
+      sourceProvider,
       sourceSnapshotId:
-        manualFallbackEnabled || healthPreviewActive ? undefined : snapshot?.id,
+        usingManualWorkoutFallback || healthPreviewActive ? undefined : snapshot?.id,
       metrics: metrics
         .filter((metric) =>
           checkInDraft.type === "workout"
@@ -807,7 +933,7 @@ export function MomentumSessionProvider({
           value: metric.value ?? 0,
           unit: metric.unit ?? null,
           source: metric.source ?? null,
-          provider: manualFallbackEnabled ? "manual" : "apple-health",
+          provider: usingManualWorkoutFallback ? "manual" : "apple-health",
           observedAt: metric.observedAt ?? null,
           confidence: metric.confidence,
         })),
@@ -869,6 +995,10 @@ export function MomentumSessionProvider({
       ),
     );
 
+    if (authState === "demo") {
+      return;
+    }
+
     try {
       await toggleHabitCompletion(habitId, target.completedToday);
       await refreshFromBackend();
@@ -878,8 +1008,30 @@ export function MomentumSessionProvider({
   };
 
   const addHabit = async (title?: string) => {
-    const nextTitle =
-      title?.trim() || habitPool[habits.length] || "Extra consistency habit";
+    const nextTitle = getNextHabitTitle(habits, title);
+
+    if (authState === "demo") {
+      setHabits((current) => {
+        if (current.length >= 3) {
+          return current;
+        }
+
+        return [
+          ...current,
+          {
+            id: `demo-habit-${createMessageId()}`,
+            title: nextTitle,
+            cadence: "Daily",
+            completedToday: false,
+            completionRate: 0,
+            streakDays: 0,
+            friendVisible: true,
+          },
+        ];
+      });
+      return;
+    }
+
     await createHabit(nextTitle);
     await refreshFromBackend();
   };
@@ -887,6 +1039,16 @@ export function MomentumSessionProvider({
   const openSquadChat = async (squadId: string) => {
     setChatLoading(true);
     setActiveSquadChatId(squadId);
+
+    if (authState === "demo") {
+      setChatOverviews((current) =>
+        current.map((overview) =>
+          overview.squadId === squadId ? { ...overview, unreadCount: 0 } : overview,
+        ),
+      );
+      setChatLoading(false);
+      return;
+    }
 
     try {
       const items = await fetchSquadMessages(squadId);
@@ -950,6 +1112,51 @@ export function MomentumSessionProvider({
   const sendSquadMessage = async (squadId: string, body: string) => {
     const trimmed = body.trim();
     if (!trimmed) return;
+
+    if (authState === "demo") {
+      const message: SquadMessage = {
+        id: `demo-message-${createMessageId()}`,
+        squadId,
+        authorId: currentUser.id,
+        authorName: currentUser.name,
+        authorUsername: currentUser.username,
+        body: trimmed,
+        createdAt: new Date().toISOString(),
+      };
+
+      setSquadMessages((current) => ({
+        ...current,
+        [squadId]: [...(current[squadId] ?? []), message],
+      }));
+      setChatOverviews((current) => {
+        const existing = current.find((overview) => overview.squadId === squadId);
+        if (!existing) {
+          return [
+            {
+              squadId,
+              unreadCount: 0,
+              lastMessageAt: message.createdAt,
+              lastMessagePreview: message.body,
+              lastMessageAuthorName: message.authorName,
+            },
+            ...current,
+          ];
+        }
+
+        return current.map((overview) =>
+          overview.squadId === squadId
+            ? {
+                ...overview,
+                unreadCount: 0,
+                lastMessageAt: message.createdAt,
+                lastMessagePreview: message.body,
+                lastMessageAuthorName: message.authorName,
+              }
+            : overview,
+        );
+      });
+      return;
+    }
 
     const pendingMessage: SquadMessage = {
       id: `pending-${createMessageId()}`,
@@ -1026,7 +1233,18 @@ export function MomentumSessionProvider({
   };
 
   const markSquadChatRead = async (squadId: string) => {
+    if (authState === "demo") {
+      setActiveSquadChatId((current) => (current === squadId ? null : current));
+      setChatOverviews((current) =>
+        current.map((overview) =>
+          overview.squadId === squadId ? { ...overview, unreadCount: 0 } : overview,
+        ),
+      );
+      return;
+    }
+
     await persistSquadChatRead(squadId);
+    setActiveSquadChatId((current) => (current === squadId ? null : current));
     setChatOverviews((current) =>
       current.map((overview) =>
         overview.squadId === squadId ? { ...overview, unreadCount: 0 } : overview,
@@ -1084,12 +1302,23 @@ export function MomentumSessionProvider({
       setSquads([]);
       setHabits([]);
       setFeedPosts([]);
+      setHomeSegment("squads");
+      setOnboardingDraft(onboardingDraftSeed);
+      setCheckInDraft(checkInDraftSeed);
       setHealthConnection(defaultConnection);
       setHealthSnapshot(null);
+      setHealthPreviewActive(false);
+      setManualFallbackEnabled(false);
+      setAuthError(null);
       setChatOverviews([]);
       setSquadMessages({});
       setActiveSquadChatId(null);
       await persistFrontendState({
+        homeSegment: "squads",
+        onboardingDraft: onboardingDraftSeed,
+        checkInDraft: checkInDraftSeed,
+        manualFallbackEnabled: false,
+        healthPreviewActive: false,
         demoMode: false,
         authEmail: "",
       });
@@ -1173,6 +1402,85 @@ export function MomentumSessionProvider({
   };
 
   const acceptInvite = async (input: { kind: "friend" | "squad"; token: string }) => {
+    if (authState === "demo") {
+      const tokenSuffix =
+        input.token.trim().replace(/[^a-zA-Z0-9]/g, "").slice(-4).toLowerCase() ||
+        createMessageId().slice(0, 4);
+
+      if (input.kind === "friend") {
+        const friendId = `demo-friend-${tokenSuffix}`;
+        const username = `friend${tokenSuffix}`;
+        setFriends((current) =>
+          current.some((friend) => friend.id === friendId || friend.username === username)
+            ? current
+            : [
+                {
+                  id: friendId,
+                  name: `Friend ${tokenSuffix.toUpperCase()}`,
+                  username,
+                  streakLabel: "Fresh connection",
+                },
+                ...current,
+              ],
+        );
+        return;
+      }
+
+      const squadId = `demo-squad-${tokenSuffix}`;
+      const nextSquad: Squad = {
+        id: squadId,
+        ownerId: `demo-owner-${tokenSuffix}`,
+        name: `Momentum ${tokenSuffix.toUpperCase()}`,
+        handle: `momentum-${tokenSuffix}`,
+        description: "Demo invite squad",
+        currentFocus: "Stay consistent this week.",
+        memberCount: 4,
+      };
+
+      setSquads((current) =>
+        current.some((squad) => squad.id === squadId) ? current : [nextSquad, ...current],
+      );
+      setChatOverviews((current) =>
+        current.some((overview) => overview.squadId === squadId)
+          ? current
+          : [
+              {
+                squadId,
+                unreadCount: 0,
+                lastMessageAt: new Date().toISOString(),
+                lastMessagePreview: "Glad you're in. Use the room to keep each other moving.",
+                lastMessageAuthorName: "Squad host",
+              },
+              ...current,
+            ],
+      );
+      setSquadMessages((current) =>
+        current[squadId]
+          ? current
+          : {
+              ...current,
+              [squadId]: [
+                {
+                  id: `demo-seed-message-${tokenSuffix}`,
+                  squadId,
+                  authorId: `demo-owner-${tokenSuffix}`,
+                  authorName: "Squad host",
+                  authorUsername: `host${tokenSuffix}`,
+                  body: "Glad you're in. Use the room to keep each other moving.",
+                  createdAt: new Date().toISOString(),
+                },
+              ],
+            },
+      );
+
+      if (!currentUser.selectedSquadId) {
+        setCurrentUser((current) => ({ ...current, selectedSquadId: squadId }));
+        setOnboardingDraft((current) => ({ ...current, selectedSquadId: squadId }));
+        setCheckInDraft((current) => ({ ...current, squadId }));
+      }
+      return;
+    }
+
     if (input.kind === "friend") {
       await persistAcceptFriendInvite(input.token);
     } else {
@@ -1306,6 +1614,7 @@ export function MomentumSessionProvider({
       toggleHabit,
       addHabit,
       refreshFromBackend,
+      joinDayOnesSquad,
       signIn: runSignIn,
       signUp: runSignUp,
       signOut: runSignOut,
@@ -1345,6 +1654,7 @@ export function MomentumSessionProvider({
       healthPreviewActive,
       healthSnapshot,
       homeSegment,
+      joinDayOnesSquad,
       lastPublishedPostId,
       manualFallbackEnabled,
       onboardingComplete,

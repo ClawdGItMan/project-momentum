@@ -9,6 +9,7 @@ import {
   pillarOptions,
 } from "@/src/data/fixtures/appSeed";
 import { useMomentumSession } from "@/src/features/app/MomentumSessionProvider";
+import { HiddenDevToolsTrigger } from "@/src/features/dev/HiddenDevToolsTrigger";
 import type {
   AccountabilityStyle,
   FocusPillar,
@@ -58,7 +59,9 @@ function StepShell({
     <ScrollScreen contentContainerStyle={styles.screenContent}>
       <View style={styles.stepHeader}>
         <View style={styles.stepRow}>
-          <Badge label={`Step ${step} / ${total}`} tone="accent" />
+          <HiddenDevToolsTrigger>
+            <Badge label={`Step ${step} / ${total}`} tone="accent" />
+          </HiddenDevToolsTrigger>
           {backHref ? (
             <Button
               label="Back"
@@ -127,7 +130,6 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 export function WelcomeScreen() {
   const router = useRouter();
-  const { startDemoSession } = useMomentumSession();
 
   return (
     <ScrollScreen contentContainerStyle={styles.screenContent}>
@@ -137,22 +139,24 @@ export function WelcomeScreen() {
         end={{ x: 1, y: 1 }}
         style={styles.hero}
       >
-        <Badge label="Project Momentum v0.1" tone="accent" />
+        <HiddenDevToolsTrigger>
+          <Badge label="Outtcast" tone="accent" />
+        </HiddenDevToolsTrigger>
         <Text style={styles.heroTitle}>Show the work.</Text>
         <Text style={styles.heroBody}>
-          Build a life worth showing up for with friends, squads, and proof that
-          you actually moved.
+          Turn workouts, habits, and recovery into visible momentum with people
+          who want to see you win.
         </Text>
       </LinearGradient>
 
       <Card
-        title="What this first build proves"
-        subtitle="Fast onboarding, real health posture, selective sharing, and a social loop that feels tighter than a generic feed."
+        title="Why people open Outtcast"
+        subtitle="Progress feels different when your effort lives in a trusted circle instead of a noisy feed."
       >
         <Text style={styles.bodyCopy}>
-          Workouts and habits stay friend-visible by default. Squads stay the
-          main accountability surface. Apple Health leads, manual entry only
-          catches what coverage misses.
+          Keep your momentum visible, stay accountable with friends and squads,
+          and let health data support the story without turning your life into a
+          public performance.
         </Text>
       </Card>
 
@@ -161,17 +165,6 @@ export function WelcomeScreen() {
           label="Start setup"
           onPress={() => router.replace("/(onboarding)/goals")}
         />
-        {__DEV__ ? (
-          <Button
-            label="Load seeded demo"
-            variant="ghost"
-            onPress={() => {
-              void startDemoSession().then(() => {
-                router.replace("/(app)/home");
-              });
-            }}
-          />
-        ) : null}
       </View>
     </ScrollScreen>
   );
@@ -238,7 +231,7 @@ export function PillarsScreen() {
       step={2}
       total={7}
       title="Choose the pillars you want visible"
-      subtitle="Fitness leads this prototype, but the identity should still feel like yours."
+      subtitle="Start with the parts of your life you want people to understand at a glance."
       backHref="/(onboarding)/goals"
       footer={
         <Button
@@ -258,10 +251,10 @@ export function PillarsScreen() {
           />
         ))}
       </View>
-      <Card subtitle="Workouts and habits stay friend-visible by default in v0.1. Everything else remains selective.">
+      <Card subtitle="Share the progress that helps your circle understand your momentum. Keep everything else on your terms.">
         <Text style={styles.bodyCopy}>
-          The first profile should communicate momentum, not look like a life
-          dashboard.
+          Your profile should feel focused and lived-in, not like a dashboard of
+          everything you do.
         </Text>
       </Card>
     </StepShell>
@@ -286,7 +279,7 @@ export function SharingScreen() {
     {
       value: "squad-first",
       title: "A squad keeps me committed",
-      subtitle: "Private groups stay the main accountability surface in this MVP.",
+      subtitle: "Private groups give your progress a shared rhythm and stronger accountability.",
     },
     {
       value: "mixed",
@@ -300,7 +293,7 @@ export function SharingScreen() {
       step={3}
       total={7}
       title="Who keeps your effort honest?"
-      subtitle="This app stays selective by default. No public feed, no public profile."
+      subtitle="Your circle stays intentional. No public feed, no public profile."
       backHref="/(onboarding)/pillars"
       footer={
         <Button
@@ -320,10 +313,10 @@ export function SharingScreen() {
           />
         ))}
       </View>
-      <Card title="Locked default" subtitle="Your first check-in starts with Friends unless you launch from a squad.">
+      <Card title="How sharing starts" subtitle="Your first check-in starts with Friends unless you post from a squad.">
         <Text style={styles.bodyCopy}>
-          Home still opens on Squads so the product feels like private
-          accountability, not shallow broadcasting.
+          Home still opens on Squads to keep accountability grounded in real
+          people, not broadcasting.
         </Text>
       </Card>
     </StepShell>
@@ -345,13 +338,13 @@ export function ProfileBasicsScreen() {
 
   const submit = () => {
     const nextErrors = {
-      name: name.trim() ? undefined : "Name helps your first profile feel real.",
+      name: name.trim() ? undefined : "Name helps your profile feel personal.",
       username: username.trim()
         ? undefined
         : "Pick a short handle for friend and squad context.",
       missionLine: missionLine.trim()
         ? undefined
-        : "Add a one-line mission so people know what you are building.",
+        : "Add a one-line mission so people know what you are focused on.",
     };
 
     setErrors(nextErrors);
@@ -390,7 +383,7 @@ export function ProfileBasicsScreen() {
           onChangeText={setUsername}
           autoCapitalize="none"
           errorText={errors.username}
-          helperText="This stays private to friends and squads in v0.1."
+          helperText="People only see this inside the circles you choose."
         />
         <TextField
           label="Mission line"
@@ -398,13 +391,13 @@ export function ProfileBasicsScreen() {
           onChangeText={setMissionLine}
           multiline
           errorText={errors.missionLine}
-          helperText="Example: Building a stronger baseline without the fake grind."
+          helperText="Example: Rebuilding my baseline one strong week at a time."
         />
         <TextField
           label="City"
           value={city}
           onChangeText={setCity}
-          helperText="Optional, but useful for a believable prototype profile."
+          helperText="Optional, if place matters to your story."
         />
       </View>
       <Card title="Profile preview">
@@ -431,36 +424,36 @@ export function ConnectHealthScreen() {
     healthConnection,
     healthLoading,
     healthSnapshot,
-    healthPreviewActive,
     manualFallbackEnabled,
   } = useMomentumSession();
 
   const statusCopy = useMemo(() => {
     switch (healthConnection.state) {
       case "connected":
-        return healthPreviewActive
-          ? "Demo preview is active with seeded Apple Health-style metrics for a believable demo path."
-          : "Apple Health is connected and the first proof bundle is available.";
+        return "Apple Health is connected and ready to support your check-ins.";
       case "connected_limited":
-        return "Apple Health is connected. To unlock the full proof bundle, make sure the last 24 hours include steps, sleep, active energy, and a workout, then refresh.";
+        return "Apple Health is connected. Refresh after a little more recent activity or sleep data to fill out your summary.";
       case "needs_attention":
         return (
           healthConnection.lastError ??
-          "Permissions or entitlements still need attention. Open the Health app, tap your profile, open Apps > Project Momentum, enable Workouts, Steps, Sleep, and Active Energy, then try again."
+          "Outtcast needs a little more access before your health summary can stay up to date. Review Apple Health sharing, then try again."
         );
       case "unavailable":
         return (
           healthConnection.lastError ??
-          "This build cannot see the Apple Health bridge yet. Reinstall the iOS development build after updating native code and confirm the app target is signed with HealthKit enabled."
+          "Apple Health is not available right now. You can keep going with manual entry and reconnect later."
         );
       case "error":
-        return healthConnection.lastError ?? "The Apple Health bridge hit an unexpected error.";
+        return (
+          healthConnection.lastError ??
+          "Apple Health could not finish syncing. Try again or keep moving with manual entry for now."
+        );
       case "authorizing":
-        return "Authorizing Apple Health and checking the first workout bundle.";
+        return "Connecting Apple Health and pulling your latest summary.";
       default:
         return "Connect Apple Health to bring workouts, steps, sleep, and active energy into the app.";
     }
-  }, [healthConnection.lastError, healthConnection.state, healthPreviewActive]);
+  }, [healthConnection.lastError, healthConnection.state]);
 
   const connectionTone = useMemo(() => {
     switch (healthConnection.state) {
@@ -487,7 +480,7 @@ export function ConnectHealthScreen() {
       step={5}
       total={7}
       title="Connect Apple Health"
-      subtitle="This first build treats Apple Health as the primary proof layer. Manual entry only catches the gaps."
+      subtitle="Sync Apple Health so workouts, sleep, steps, and active energy can support your check-ins."
       backHref="/(onboarding)/profile-basics"
       footer={
         <Button
@@ -497,17 +490,14 @@ export function ConnectHealthScreen() {
         />
       }
     >
-      <Card title="Connection state" subtitle="A development build is the intended path for this integration.">
+      <Card title="Connection state" subtitle="Syncing makes your updates faster, clearer, and more grounded in what you actually did.">
         <View style={styles.row}>
           <Badge
             label={formatConnectionState(healthConnection.state)}
             tone={connectionTone}
           />
-          {healthPreviewActive ? (
-            <Badge label="Demo preview" tone="accent" />
-          ) : null}
           {manualFallbackEnabled ? (
-            <Badge label="Manual fallback" tone="warning" />
+            <Badge label="Manual entry active" tone="warning" />
           ) : null}
         </View>
         <Text style={styles.bodyCopy}>{statusCopy}</Text>
@@ -532,6 +522,16 @@ export function ConnectHealthScreen() {
             ))}
           </View>
         ) : null}
+        {(healthConnection.state === "connected" ||
+          healthConnection.state === "connected_limited") &&
+        healthConnection.lastError ? (
+          <Card
+            title="Health summary needs one more try"
+            subtitle="Apple Health connected on this device, but the latest summary did not save cleanly yet."
+          >
+            <Text style={styles.bodyCopy}>{healthConnection.lastError}</Text>
+          </Card>
+        ) : null}
         {healthConnection.state === "unavailable" ||
         healthConnection.state === "needs_attention" ||
         healthConnection.state === "error" ? (
@@ -541,10 +541,10 @@ export function ConnectHealthScreen() {
           />
         ) : null}
         {manualFallbackEnabled ? (
-          <Card subtitle="Fallback enabled">
+          <Card subtitle="Manual entry is on">
             <Text style={styles.bodyCopy}>
-              Manual entry will stay available only where coverage is missing or
-              the connection cannot complete.
+              You can still share workouts and progress even when syncing is not
+              ready yet.
             </Text>
           </Card>
         ) : null}
@@ -552,22 +552,17 @@ export function ConnectHealthScreen() {
           <Button
             label="Connect Apple Health"
             loading={healthLoading}
-            onPress={() => connectHealth()}
+            onPress={() => void connectHealth()}
           />
           <Button
-            label={healthPreviewActive ? "Refresh demo preview" : "Use demo preview data"}
-            variant="secondary"
-            onPress={() => connectHealth({ preview: true })}
-          />
-          <Button
-            label="Use manual fallback"
+            label="Use manual entry for now"
             variant="ghost"
             onPress={enableManualFallback}
           />
         </View>
       </Card>
 
-      <Card title="Coverage needed for v0.1" subtitle="The first believable proof bundle is workouts, steps, sleep, and active energy.">
+      <Card title="What sync can include" subtitle="Outtcast looks for workouts, steps, sleep, and active energy.">
         {healthConnection.coverage.map((item) => (
           <StatRow
             key={item.key}
@@ -578,10 +573,10 @@ export function ConnectHealthScreen() {
         ))}
       </Card>
 
-      <Card title="Privacy posture" subtitle="Health data trust has to be explicit in the first demo.">
+      <Card title="Privacy posture" subtitle="Shared updates use a summary of your progress, not a stream of raw personal data.">
         <Text style={styles.bodyCopy}>
-          Raw HealthKit data stays on-device in the intended native path. Shared posts
-          use normalized summaries, not a public stream of private metrics.
+          Apple Health data stays private by default. Outtcast uses a simple
+          summary to support the progress you choose to share.
         </Text>
       </Card>
     </StepShell>
@@ -590,15 +585,33 @@ export function ConnectHealthScreen() {
 
 export function SquadStepScreen() {
   const router = useRouter();
-  const { currentUser, setSelectedSquad, squads } = useMomentumSession();
+  const { currentUser, joinDayOnesSquad, setSelectedSquad, squads } = useMomentumSession();
   const visibleSquads = squads;
+  const [joiningDayOnes, setJoiningDayOnes] = useState(false);
+  const [joinDayOnesError, setJoinDayOnesError] = useState<string | null>(null);
+  const dayOnesSquad = visibleSquads.find((squad) => squad.handle === "day-ones");
+
+  const joinStarterSquad = async () => {
+    setJoinDayOnesError(null);
+    setJoiningDayOnes(true);
+
+    try {
+      await joinDayOnesSquad();
+    } catch (error) {
+      setJoinDayOnesError(
+        getErrorMessage(error, "Unable to join Day ones right now."),
+      );
+    } finally {
+      setJoiningDayOnes(false);
+    }
+  };
 
   return (
     <StepShell
       step={6}
       total={7}
       title="Choose a squad to anchor the first loop"
-      subtitle="This step is skippable, but squads remain the main accountability surface in v0.1."
+      subtitle="Skip this for now, or choose a room that keeps your effort accountable."
       backHref="/(onboarding)/connect-health"
       footer={
         <View style={styles.stack}>
@@ -618,15 +631,27 @@ export function SquadStepScreen() {
       }
     >
       <View style={styles.stack}>
-        {!visibleSquads.length ? (
+        {!dayOnesSquad ? (
           <Card
-            title="No squad yet"
-            subtitle="You can skip this for now and still finish onboarding. Live squad creation and invite acceptance are available in Connections after setup."
+            title="Join Day ones"
+            subtitle="A starter squad for people building from the beginning."
           >
             <Text style={styles.bodyCopy}>
-              This keeps the onboarding honest for founder alpha instead of filling the screen with seeded squads you do not actually belong to.
+              Jump into a room where people are showing up, posting honestly, and
+              helping each other stay consistent.
             </Text>
+            <Button
+              label="Join Day ones"
+              loading={joiningDayOnes}
+              onPress={() => void joinStarterSquad()}
+            />
           </Card>
+        ) : null}
+        {joinDayOnesError ? (
+          <ErrorState
+            title="Couldn’t join Day ones"
+            message={joinDayOnesError}
+          />
         ) : null}
         {visibleSquads.map((squad) => (
           <SelectableCard
@@ -649,7 +674,6 @@ export function RecapScreen() {
     consistency,
     currentUser,
     healthConnection,
-    healthPreviewActive,
     squads,
   } = useMomentumSession();
   const [submitting, setSubmitting] = useState(false);
@@ -676,7 +700,7 @@ export function RecapScreen() {
       step={7}
       total={7}
       title="You’re set up to show the work"
-      subtitle="The next move is a fast workout check-in that lands in a believable social context."
+      subtitle="Next up: share your first workout so your circle can see the work."
       backHref="/(onboarding)/squad"
       footer={
         <Button
@@ -695,7 +719,6 @@ export function RecapScreen() {
         </View>
         <View style={styles.row}>
           <Badge label={formatConnectionState(healthConnection.state)} tone="accent" />
-          {healthPreviewActive ? <Badge label="Demo preview" tone="accent" /> : null}
           {selectedSquad ? <Badge label={selectedSquad.name} tone="neutral" /> : null}
         </View>
       </Card>

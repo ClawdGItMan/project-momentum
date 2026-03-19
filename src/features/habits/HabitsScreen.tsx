@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
@@ -10,6 +10,29 @@ import { Button, Card, EmptyState, ScrollScreen } from "@/src/ui/primitives";
 export function HabitsScreen() {
   const router = useRouter();
   const { addHabit, consistency, habits, toggleHabit } = useMomentumSession();
+  const [addHabitError, setAddHabitError] = useState<string | null>(null);
+  const [addHabitLoading, setAddHabitLoading] = useState(false);
+
+  const handleAddHabit = async () => {
+    if (addHabitLoading || habits.length >= 3) {
+      return;
+    }
+
+    setAddHabitError(null);
+    setAddHabitLoading(true);
+
+    try {
+      await addHabit();
+    } catch (error) {
+      setAddHabitError(
+        error instanceof Error && error.message.trim().length > 0
+          ? error.message
+          : "Unable to add a habit right now.",
+      );
+    } finally {
+      setAddHabitLoading(false);
+    }
+  };
 
   return (
     <ScrollScreen contentContainerStyle={styles.screenContent}>
@@ -38,7 +61,7 @@ export function HabitsScreen() {
               >
                 <Text style={styles.helper}>
                   {habit.friendVisible
-                    ? "Friend-visible by default in v0.1."
+                    ? "Shared with friends by default."
                     : "Private until you decide otherwise."}
                 </Text>
                 <Button
@@ -52,18 +75,20 @@ export function HabitsScreen() {
         ) : (
           <EmptyState
             title="Start with one habit"
-            message="One or two visible habits are enough to make consistency feel real in the demo."
+            message="One or two visible habits are enough to make consistency feel concrete."
             actionLabel="Add a habit"
-            onActionPress={() => addHabit()}
+            onActionPress={() => void handleAddHabit()}
           />
         )}
 
         <Button
-          label={habits.length >= 3 ? "Habit limit reached for v0.1" : "Add one more habit"}
+          label={habits.length >= 3 ? "Habit limit reached" : "Add one more habit"}
           variant="secondary"
           disabled={habits.length >= 3}
-          onPress={() => addHabit()}
+          loading={addHabitLoading}
+          onPress={() => void handleAddHabit()}
         />
+        {addHabitError ? <Text style={styles.error}>{addHabitError}</Text> : null}
       </View>
     </ScrollScreen>
   );
@@ -89,6 +114,10 @@ const styles = StyleSheet.create({
   helper: {
     ...theme.typography.bodySmall,
     color: theme.color.fg.secondary,
+  },
+  error: {
+    ...theme.typography.bodySmall,
+    color: theme.color.accent.danger,
   },
   list: {
     gap: theme.spacing.md,

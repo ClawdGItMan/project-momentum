@@ -1,1 +1,5 @@
-export { ConnectionsScreen as default } from "@/src/features/connections/ConnectionsScreen";
+import { Redirect } from "expo-router";
+
+export default function LegacyConnectionsRoute() {
+  return <Redirect href="/(app)/squads" />;
+}
