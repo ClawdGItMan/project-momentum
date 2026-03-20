@@ -1,33 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import { theme } from "@/src/design";
 import { useMomentumSession } from "@/src/features/app/MomentumSessionProvider";
-import { formatConnectionState } from "@/src/lib/formatters";
+import { HiddenDevToolsTrigger } from "@/src/features/dev/HiddenDevToolsTrigger";
 import { Badge, Button, Card, EmptyState, ScrollScreen, TextField } from "@/src/ui/primitives";
 
-export function ConnectionsScreen() {
+export function SquadsScreen() {
   const router = useRouter();
   const {
     acceptInvite,
     chatOverviews,
-    connectHealth,
     createSquad,
     createSquadInviteToken,
     currentUser,
-    enableManualFallback,
     friends,
-    healthConnection,
-    healthLoading,
-    healthPreviewActive,
-    manualFallbackEnabled,
-    resetDemoSession,
     sendFriendInvite,
     setSelectedSquad,
     squads,
   } = useMomentumSession();
-  const showDemoControls = __DEV__ || Platform.OS === "web";
 
   const [friendUsername, setFriendUsername] = useState("");
   const [friendMessage, setFriendMessage] = useState("");
@@ -157,152 +149,22 @@ export function ConnectionsScreen() {
   return (
     <ScrollScreen contentContainerStyle={styles.screenContent}>
       <View style={styles.container}>
-        <Text style={styles.title}>Connections</Text>
-
-        {showDemoControls ? (
-          <Card
-            title="Demo controls"
-            subtitle={`Health: ${formatConnectionState(healthConnection.state)}${healthPreviewActive ? " • demo preview" : ""}${manualFallbackEnabled ? " • manual fallback active" : ""}`}
-          >
-            <Text style={styles.helper}>
-              These controls exist for demo environments where native HealthKit is not
-              available or you need to quickly reset the first-run loop.
+        <HiddenDevToolsTrigger>
+          <View style={styles.titleStack}>
+            <Text style={styles.title}>Squads</Text>
+            <Text style={styles.pageIntro}>
+              Pick the room you want to show up with, jump into chat, and keep invites moving
+              without leaving this space.
             </Text>
-            <View style={styles.actions}>
-              <Button
-                label="Try Apple Health"
-                fullWidth={false}
-                loading={healthLoading}
-                onPress={() => void connectHealth()}
-              />
-              <Button
-                label="Preview metrics"
-                fullWidth={false}
-                variant="secondary"
-                onPress={() => void connectHealth({ preview: true })}
-              />
-              <Button
-                label="Enable fallback"
-                fullWidth={false}
-                variant="ghost"
-                onPress={enableManualFallback}
-              />
-              <Button
-                label="Reset demo"
-                fullWidth={false}
-                variant="ghost"
-                onPress={() => void resetDemoSession()}
-              />
-            </View>
-          </Card>
-        ) : null}
-
-        <Card
-          title="Invite a friend"
-          subtitle="Founder alpha stays exact-username only. No public discovery surface."
-        >
-          <View style={styles.stack}>
-            <TextField
-              label="Username"
-              value={friendUsername}
-              onChangeText={setFriendUsername}
-              autoCapitalize="none"
-              autoCorrect={false}
-              helperText="Use the exact profile handle, without relying on search."
-            />
-            <TextField
-              label="Optional message"
-              value={friendMessage}
-              onChangeText={setFriendMessage}
-              multiline
-              helperText="Short context helps the invite feel intentional."
-            />
-            <Button
-              label="Send friend invite"
-              disabled={!friendUsername.trim()}
-              loading={submittingKey === "friend-invite"}
-              onPress={() => void submitFriendInvite()}
-            />
           </View>
-        </Card>
-
-        <Card
-          title="Create your own squad"
-          subtitle="Start the room, set the focus, and bring in the friends you want doing the work with you."
-        >
-          <View style={styles.stack}>
-            <TextField
-              label="Squad name"
-              value={squadName}
-              onChangeText={setSquadName}
-            />
-            <TextField
-              label="Handle"
-              value={squadHandle}
-              onChangeText={setSquadHandle}
-              autoCapitalize="none"
-              autoCorrect={false}
-              helperText="Use a simple internal handle like morning-run-club."
-            />
-            <TextField
-              label="Current focus"
-              value={squadFocus}
-              onChangeText={setSquadFocus}
-              helperText="Example: Four workouts before Sunday."
-            />
-            <TextField
-              label="Description"
-              value={squadDescription}
-              onChangeText={setSquadDescription}
-              multiline
-            />
-            <Button
-              label="Create squad"
-              disabled={!squadName.trim() || !squadHandle.trim()}
-              loading={submittingKey === "create-squad"}
-              onPress={() => void submitCreateSquad()}
-            />
-          </View>
-        </Card>
-
-        <Card
-          title="Accept an invite"
-          subtitle="Paste the invite token for either a friend link or squad link."
-        >
-          <View style={styles.stack}>
-            <TextField
-              label="Invite token"
-              value={inviteToken}
-              onChangeText={setInviteToken}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <View style={styles.actions}>
-              <Button
-                label="Accept friend invite"
-                fullWidth={false}
-                variant="secondary"
-                disabled={!inviteToken.trim()}
-                loading={submittingKey === "accept-friend"}
-                onPress={() => void submitAcceptInvite("friend")}
-              />
-              <Button
-                label="Accept squad invite"
-                fullWidth={false}
-                disabled={!inviteToken.trim()}
-                loading={submittingKey === "accept-squad"}
-                onPress={() => void submitAcceptInvite("squad")}
-              />
-            </View>
-          </View>
-        </Card>
+        </HiddenDevToolsTrigger>
 
         {actionError ? <Text style={styles.error}>{actionError}</Text> : null}
         {actionNotice ? <Text style={styles.notice}>{actionNotice}</Text> : null}
 
         <Card
-          title="Squads"
-          subtitle="Private groups stay the main accountability surface in this MVP."
+          title="Your squads"
+          subtitle="Private groups keep accountability focused, supportive, and low-noise."
         >
           <View style={styles.list}>
             {squads.length ? (
@@ -376,6 +238,45 @@ export function ConnectionsScreen() {
           </View>
         </Card>
 
+        <Card
+          title="Create your own squad"
+          subtitle="Start the room, set the focus, and bring in the friends you want doing the work with you."
+        >
+          <View style={styles.stack}>
+            <TextField
+              label="Squad name"
+              value={squadName}
+              onChangeText={setSquadName}
+            />
+            <TextField
+              label="Handle"
+              value={squadHandle}
+              onChangeText={setSquadHandle}
+              autoCapitalize="none"
+              autoCorrect={false}
+              helperText="Use a simple internal handle like morning-run-club."
+            />
+            <TextField
+              label="Current focus"
+              value={squadFocus}
+              onChangeText={setSquadFocus}
+              helperText="Example: Four workouts before Sunday."
+            />
+            <TextField
+              label="Description"
+              value={squadDescription}
+              onChangeText={setSquadDescription}
+              multiline
+            />
+            <Button
+              label="Create squad"
+              disabled={!squadName.trim() || !squadHandle.trim()}
+              loading={submittingKey === "create-squad"}
+              onPress={() => void submitCreateSquad()}
+            />
+          </View>
+        </Card>
+
         {inviteSquad ? (
           <Card
             title={`Invite friends to ${inviteSquad.name}`}
@@ -434,7 +335,68 @@ export function ConnectionsScreen() {
         ) : null}
 
         <Card
-          title="Friends"
+          title="Accept an invite"
+          subtitle="Paste the code for a friend invite or a squad invite."
+        >
+          <View style={styles.stack}>
+            <TextField
+              label="Invite token"
+              value={inviteToken}
+              onChangeText={setInviteToken}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <View style={styles.actions}>
+              <Button
+                label="Accept friend invite"
+                fullWidth={false}
+                variant="secondary"
+                disabled={!inviteToken.trim()}
+                loading={submittingKey === "accept-friend"}
+                onPress={() => void submitAcceptInvite("friend")}
+              />
+              <Button
+                label="Accept squad invite"
+                fullWidth={false}
+                disabled={!inviteToken.trim()}
+                loading={submittingKey === "accept-squad"}
+                onPress={() => void submitAcceptInvite("squad")}
+              />
+            </View>
+          </View>
+        </Card>
+
+        <Card
+          title="Invite a friend"
+          subtitle="Use the exact username to keep your private circle intentional."
+        >
+          <View style={styles.stack}>
+            <TextField
+              label="Username"
+              value={friendUsername}
+              onChangeText={setFriendUsername}
+              autoCapitalize="none"
+              autoCorrect={false}
+              helperText="Ask for the handle they use in Outtcast."
+            />
+            <TextField
+              label="Optional message"
+              value={friendMessage}
+              onChangeText={setFriendMessage}
+              multiline
+              helperText="Short context helps the invite feel intentional."
+            />
+            <Button
+              label="Send friend invite"
+              disabled={!friendUsername.trim()}
+              loading={submittingKey === "friend-invite"}
+              onPress={() => void submitFriendInvite()}
+            />
+          </View>
+        </Card>
+
+        <Card
+          title="Friends in your circle"
           subtitle="Mutual acceptance only. No followers and no public profile browsing."
         >
           <View style={styles.list}>
@@ -451,15 +413,35 @@ export function ConnectionsScreen() {
             ) : (
               <EmptyState
                 title="No friends connected yet"
-                message="Send an exact-username invite or accept one to unlock the private friends lane."
+                message="Send an exact-username invite or accept one to unlock your private friends lane."
               />
             )}
+          </View>
+        </Card>
+
+        <Card
+          title="Account and health settings"
+          subtitle="Provider management moved into the private account hub so existing users can reconnect without replaying setup."
+        >
+          <View style={styles.stack}>
+            <Text style={styles.helper}>
+              Use account settings to connect or refresh Apple Health, Strava, or WHOOP, review
+              the latest saved summaries, and manage sign-out or deletion safely.
+            </Text>
+            <Button
+              label="Open account settings"
+              fullWidth={false}
+              variant="secondary"
+              onPress={() => router.push("/(app)/account")}
+            />
           </View>
         </Card>
       </View>
     </ScrollScreen>
   );
 }
+
+export const ConnectionsScreen = SquadsScreen;
 
 const styles = StyleSheet.create({
   screenContent: {
@@ -468,9 +450,16 @@ const styles = StyleSheet.create({
   container: {
     gap: theme.spacing.md,
   },
+  titleStack: {
+    gap: theme.spacing.xs,
+  },
   title: {
     ...theme.typography.title,
     color: theme.color.fg.primary,
+  },
+  pageIntro: {
+    ...theme.typography.body,
+    color: theme.color.fg.muted,
   },
   list: {
     gap: theme.spacing.sm,

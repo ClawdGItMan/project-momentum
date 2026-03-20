@@ -1,11 +1,12 @@
 import React, { PropsWithChildren } from "react";
-import { SafeAreaView, StyleSheet, View, ViewStyle } from "react-native";
+import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { theme } from "@/src/design";
 
 type ScreenProps = PropsWithChildren<{
   padded?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }>;
 
 export function Screen({ children, padded = true, style }: ScreenProps) {
@@ -25,8 +26,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   padded: {
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
   },
 });
-

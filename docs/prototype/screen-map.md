@@ -6,7 +6,7 @@
 - Post / Check-In
 - Habits
 - Profile
-- Connections
+- Squads
 
 ## Auth Screens
 
@@ -23,7 +23,7 @@
 4. Share preference and accountability prompt
 5. Profile basics
 6. Apple Health connection with manual fallback
-7. Squad choice with live memberships only, skippable if none yet
+7. Squad choice with a featured `Day ones` starter squad plus any live memberships, still skippable
 8. Onboarding recap
 
 ## Core Authenticated Screens
@@ -39,7 +39,8 @@
 ### Post / Check-In Composer
 
 - choose post type
-- attach metrics or manual progress
+- choose source: auto, Apple Health, Strava, WHOOP, or manual fallback
+- attach synced metrics or manual progress
 - choose visibility: only me, friends, or squad
 - add caption or reflection
 - publish preview
@@ -59,19 +60,28 @@
 - visible momentum stats
 - badge or milestone area
 - selected audience and privacy cues
+- account settings entry point
 
-### Connections
+### Account / Settings
 
-- friends
+- Apple Health, Strava, and WHOOP connection cards
+- latest saved summary and latest sync state per provider
+- coverage summary, retry path, and disconnect for remote providers
+- sign out
+- delete account flow with typed confirmation
+- owned-squad transfer controls before deletion
+
+### Squads
+
 - squads and squad invites
+- selected squad state
+- squad chat entry points from squad rows
 - exact-username friend invite
 - create-your-own-squad flow
 - owned-squad invite surface for existing friends
 - generated friend and squad invite tokens as fallback handoff
-- squad creation
 - invite token acceptance
-- provider connection and refresh controls
-- squad chat entry points from squad rows
+- friends list as supporting private-graph setup
 
 ### Squad Chat
 
@@ -79,7 +89,7 @@
 - text-only messages
 - unread counts and last-message preview
 - join-forward history rule
-- entry from selected squad on Home and from squad rows in Connections
+- entry from selected squad on Home and from squad rows in Squads
 
 ## Supporting Screens
 
@@ -90,6 +100,7 @@
 - integration detail screen
 - privacy and audience selector sheet
 - squad chat screen
+- account settings screen
 
 ## Screen Priority
 
@@ -99,6 +110,7 @@ Build priority should be:
 2. auth and onboarding persistence
 3. post flow
 4. feed
-5. connections plus squad chat
-6. habits
-7. profile
+5. squads plus squad chat
+6. account and Apple Health management
+7. habits
+8. profile

@@ -1,15 +1,14 @@
 import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
 
 import { theme } from "@/src/design";
 import { useMomentumSession } from "@/src/features/app/MomentumSessionProvider";
+import { HiddenDevToolsTrigger } from "@/src/features/dev/HiddenDevToolsTrigger";
 import { Badge, Button, Card, ScrollScreen, TextField } from "@/src/ui/primitives";
 
 export function AuthScreen() {
-  const router = useRouter();
-  const { authError, authLoading, signIn, signUp, startDemoSession } = useMomentumSession();
+  const { authError, authLoading, signIn, signUp } = useMomentumSession();
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,8 +18,8 @@ export function AuthScreen() {
   const helperCopy = useMemo(
     () =>
       mode === "sign-in"
-        ? "Use the account you created for founder alpha testing."
-        : "Create a real founder-alpha account before the onboarding flow starts.",
+        ? "Pick up where you left off and keep your progress moving."
+        : "Create your account to build consistency with people who actually care.",
     [mode],
   );
 
@@ -31,16 +30,14 @@ export function AuthScreen() {
     try {
       if (mode === "sign-in") {
         await signIn(email, password);
-        router.replace("/(onboarding)/welcome");
       } else {
         const result = await signUp(email, password);
         if (result.needsEmailConfirmation) {
           setPostSubmitNotice(
-            "Check your inbox to confirm this account, then come back and sign in.",
+            "Check your inbox to confirm your email, then come back and sign in.",
           );
           return;
         }
-        router.replace("/(onboarding)/welcome");
       }
     } catch (error) {
       setSubmitError(
@@ -57,11 +54,13 @@ export function AuthScreen() {
         end={{ x: 1, y: 1 }}
         style={styles.hero}
       >
-        <Badge label="Founder alpha" tone="accent" />
-        <Text style={styles.heroTitle}>Build momentum with real accounts.</Text>
+        <HiddenDevToolsTrigger>
+          <Badge label="Outtcast" tone="accent" />
+        </HiddenDevToolsTrigger>
+        <Text style={styles.heroTitle}>Turn effort into visible momentum.</Text>
         <Text style={styles.heroBody}>
-          The product stays private-by-default: real people, real squads, and a
-          stronger proof loop than a generic social feed.
+          Outtcast helps you stay consistent, share real progress with trusted
+          people, and build a life that feels stronger every week.
         </Text>
       </LinearGradient>
 
@@ -109,17 +108,6 @@ export function AuthScreen() {
               )
             }
           />
-          {__DEV__ ? (
-            <Button
-              label="Load seeded demo"
-              variant="secondary"
-              onPress={() => {
-                void startDemoSession().then(() => {
-                  router.replace("/(app)/home");
-                });
-              }}
-            />
-          ) : null}
         </View>
       </Card>
     </ScrollScreen>

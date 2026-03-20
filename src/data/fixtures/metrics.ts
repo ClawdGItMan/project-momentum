@@ -65,6 +65,128 @@ export const seededAppleHealthMetrics: MetricValue[] = [
   },
 ];
 
+export const seededStravaCoverage: MetricCoverage[] = [
+  { key: "workouts", available: true },
+  { key: "distance", available: true },
+  { key: "duration", available: true },
+  { key: "active-energy", available: true },
+];
+
+export const seededStravaMetrics: MetricValue[] = [
+  {
+    key: "workouts",
+    value: 1,
+    unit: "count",
+    source: "live",
+    provider: "strava",
+    observedAt: now.toISOString(),
+    window: demoMetricWindow,
+    confidence: "high",
+  },
+  {
+    key: "distance",
+    value: 5.4,
+    unit: "mi",
+    source: "live",
+    provider: "strava",
+    observedAt: now.toISOString(),
+    window: demoMetricWindow,
+    confidence: "high",
+  },
+  {
+    key: "duration",
+    value: 47,
+    unit: "min",
+    source: "live",
+    provider: "strava",
+    observedAt: now.toISOString(),
+    window: demoMetricWindow,
+    confidence: "high",
+  },
+  {
+    key: "active-energy",
+    value: 588,
+    unit: "kcal",
+    source: "live",
+    provider: "strava",
+    observedAt: now.toISOString(),
+    window: demoMetricWindow,
+    confidence: "medium",
+  },
+];
+
+export const seededWhoopCoverage: MetricCoverage[] = [
+  { key: "workouts", available: true },
+  { key: "duration", available: true },
+  { key: "sleep-duration", available: true },
+  { key: "recovery-score", available: true },
+  { key: "strain-score", available: true },
+  { key: "resting-heart-rate", available: true },
+];
+
+export const seededWhoopMetrics: MetricValue[] = [
+  {
+    key: "workouts",
+    value: 1,
+    unit: "count",
+    source: "live",
+    provider: "whoop",
+    observedAt: now.toISOString(),
+    window: demoMetricWindow,
+    confidence: "high",
+  },
+  {
+    key: "duration",
+    value: 53,
+    unit: "min",
+    source: "live",
+    provider: "whoop",
+    observedAt: now.toISOString(),
+    window: demoMetricWindow,
+    confidence: "high",
+  },
+  {
+    key: "sleep-duration",
+    value: 7.8,
+    unit: "hours",
+    source: "live",
+    provider: "whoop",
+    observedAt: now.toISOString(),
+    window: demoMetricWindow,
+    confidence: "high",
+  },
+  {
+    key: "recovery-score",
+    value: 78,
+    unit: "%",
+    source: "live",
+    provider: "whoop",
+    observedAt: now.toISOString(),
+    window: demoMetricWindow,
+    confidence: "high",
+  },
+  {
+    key: "strain-score",
+    value: 13.6,
+    unit: "score",
+    source: "live",
+    provider: "whoop",
+    observedAt: now.toISOString(),
+    window: demoMetricWindow,
+    confidence: "high",
+  },
+  {
+    key: "resting-heart-rate",
+    value: 52,
+    unit: "bpm",
+    source: "live",
+    provider: "whoop",
+    observedAt: now.toISOString(),
+    window: demoMetricWindow,
+    confidence: "high",
+  },
+];
+
 export const seededConsistencyWeek: ConsistencyDayInput[] = [
   { date: "2026-03-10", checkedIn: true, scheduledHabits: 2, completedHabits: 2, workoutCompleted: true },
   { date: "2026-03-11", checkedIn: true, scheduledHabits: 2, completedHabits: 1, workoutCompleted: false },

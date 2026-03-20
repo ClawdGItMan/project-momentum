@@ -5,7 +5,7 @@ async function main() {
   const runtime = createRuntime();
 
   await runtime.queue.start();
-  await registerDefaultWorkers(runtime.queue, runtime.logger);
+  await registerDefaultWorkers(runtime);
 
   runtime.logger.info(
     {

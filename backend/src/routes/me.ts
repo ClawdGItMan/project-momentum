@@ -21,6 +21,17 @@ const mePatchSchema = z
 
 export const meRouter = new Hono<AppBindings>();
 
+type OwnedSquadRow = {
+  id: string;
+  name: string;
+  handle: string;
+};
+
+type SquadMembershipRow = {
+  squad_id: string;
+  user_id: string;
+};
+
 meRouter.get("/me", async (c) => {
   const auth = await requireAuthenticatedUser(c);
   if (auth.response) return auth.response;
@@ -49,6 +60,130 @@ meRouter.get("/me", async (c) => {
   }
 
   return okResponse(c, data);
+});
+
+meRouter.delete("/me", async (c) => {
+  const auth = await requireAuthenticatedUser(c);
+  if (auth.response) return auth.response;
+
+  const supabaseAdmin = c.get("supabaseAdmin");
+
+  const { data: ownedSquads, error: ownedSquadsError } = await supabaseAdmin
+    .from("squads")
+    .select("id, name, handle")
+    .eq("owner_id", auth.user.id)
+    .order("created_at", { ascending: false });
+
+  if (ownedSquadsError) {
+    return errorResponse(c, {
+      status: 500,
+      code: "account_delete_precheck_failed",
+      message: "Unable to verify squad ownership before deleting the account.",
+      details:
+        c.get("env").nodeEnv === "development"
+          ? {
+              code: ownedSquadsError.code,
+              details: ownedSquadsError.details,
+              hint: ownedSquadsError.hint,
+            }
+          : undefined,
+    });
+  }
+
+  const ownedSquadRows = (ownedSquads ?? []) as OwnedSquadRow[];
+  const ownedSquadIds = ownedSquadRows.map((squad) => squad.id);
+
+  let blockingSquads: Array<OwnedSquadRow & { otherActiveMemberCount: number }> = [];
+
+  if (ownedSquadIds.length > 0) {
+    const { data: memberships, error: membershipsError } = await supabaseAdmin
+      .from("squad_memberships")
+      .select("squad_id, user_id")
+      .eq("state", "active")
+      .neq("user_id", auth.user.id)
+      .in("squad_id", ownedSquadIds);
+
+    if (membershipsError) {
+      return errorResponse(c, {
+        status: 500,
+        code: "account_delete_precheck_failed",
+        message: "Unable to inspect squad memberships before deleting the account.",
+        details:
+          c.get("env").nodeEnv === "development"
+            ? {
+                code: membershipsError.code,
+                details: membershipsError.details,
+                hint: membershipsError.hint,
+              }
+            : undefined,
+      });
+    }
+
+    const membershipRows = (memberships ?? []) as SquadMembershipRow[];
+    const activeCounts = new Map<string, number>();
+
+    for (const membership of membershipRows) {
+      activeCounts.set(
+        membership.squad_id,
+        (activeCounts.get(membership.squad_id) ?? 0) + 1,
+      );
+    }
+
+    blockingSquads = ownedSquadRows
+      .map((squad) => ({
+        ...squad,
+        otherActiveMemberCount: activeCounts.get(squad.id) ?? 0,
+      }))
+      .filter((squad) => squad.otherActiveMemberCount > 0);
+  }
+
+  if (blockingSquads.length > 0) {
+    return errorResponse(c, {
+      status: 409,
+      code: "account_delete_blocked",
+      message: "Transfer ownership of your active squads before deleting this account.",
+      details: {
+        blockingSquads,
+      },
+    });
+  }
+
+  const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(auth.user.id);
+
+  if (deleteError) {
+    const deleteDetails = deleteError as {
+      code?: string;
+      details?: string;
+      hint?: string;
+    };
+
+    c.get("logger").error(
+      {
+        requestId: c.get("requestId"),
+        userId: auth.user.id,
+        deleteError,
+      },
+      "Failed to delete authenticated user account.",
+    );
+
+    return errorResponse(c, {
+      status: 500,
+      code: "account_delete_failed",
+      message: "Unable to delete the account.",
+      details:
+        c.get("env").nodeEnv === "development"
+          ? {
+              code: deleteDetails.code,
+              details: deleteDetails.details,
+              hint: deleteDetails.hint,
+            }
+          : undefined,
+    });
+  }
+
+  return okResponse(c, {
+    deleted: true,
+  });
 });
 
 meRouter.patch("/me", async (c) => {

@@ -1,10 +1,17 @@
 import React from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import { theme } from "@/src/design";
 import { useMomentumSession } from "@/src/features/app/MomentumSessionProvider";
-import { formatConnectionState, formatMetricLabel } from "@/src/lib/formatters";
+import { HiddenDevToolsTrigger } from "@/src/features/dev/HiddenDevToolsTrigger";
+import {
+  formatConnectionState,
+  formatMetricLabel,
+  formatProviderLabel,
+} from "@/src/lib/formatters";
+import { managedProviders } from "@/src/lib/providers";
+import { getSnapshotFlags } from "@/src/lib/providers";
 import { ConsistencyCard } from "@/src/ui/composites/ConsistencyCard";
 import { ProgressPostCard } from "@/src/ui/composites/ProgressPostCard";
 import {
@@ -24,29 +31,36 @@ export function ProfileScreen() {
     consistency,
     currentUser,
     feedPosts,
-    healthConnection,
     healthPreviewActive,
-    healthSnapshot,
-    resetDemoSession,
-    signOut,
+    providerConnections,
+    providerSnapshots,
   } = useMomentumSession();
 
   const myPosts = feedPosts.filter((post) => post.authorId === currentUser.id);
-  const showDemoControls = __DEV__ || Platform.OS === "web";
+  const healthConnection = providerConnections["apple-health"];
+  const healthSnapshot = providerSnapshots["apple-health"] ?? null;
+  const healthFlags = getSnapshotFlags(healthConnection, healthSnapshot, {
+    preview: healthPreviewActive,
+  });
+  const connectedProviders = managedProviders.filter((provider) => {
+    const state = providerConnections[provider].state;
+    return state === "connected" || state === "connected_limited";
+  });
 
   return (
     <ScrollScreen contentContainerStyle={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerCopy}>
+        <HiddenDevToolsTrigger style={styles.headerCopy}>
           <Text style={styles.name}>{currentUser.name}</Text>
           <Text style={styles.username}>@{currentUser.username}</Text>
-        </View>
+        </HiddenDevToolsTrigger>
         <View style={styles.wrap}>
           <Badge label={formatConnectionState(healthConnection.state)} tone="accent" />
-          {healthPreviewActive ? <Badge label="Demo preview" tone="accent" /> : null}
-          {authState === "authenticated" ? (
-            <Badge label="Live account" tone="success" />
-          ) : null}
+          {connectedProviders
+            .filter((provider) => provider !== "apple-health")
+            .map((provider) => (
+              <Badge key={provider} label={formatProviderLabel(provider)} tone="neutral" />
+            ))}
         </View>
       </View>
 
@@ -81,13 +95,14 @@ export function ProfileScreen() {
           />
         </View>
         <Card
-          subtitle={`Apple Health status: ${formatConnectionState(healthConnection.state)}`}
+          subtitle={`Default source: ${formatProviderLabel("apple-health")} • ${formatConnectionState(healthConnection.state)}`}
         >
           <Text style={styles.supportingCopy}>
-            Apple Health is the main proof layer in v0.1. Manual entry only steps in
-            when coverage or connection falls short.
+            Apple Health remains the default proof surface, while connected providers add recovery
+            and workout provenance where available.
           </Text>
-          {(healthSnapshot?.metrics ?? []).length ? (
+          {(healthSnapshot?.metrics ?? []).length &&
+          (!healthFlags.showHistoricalSummary || healthFlags.showUnsavedSummary) ? (
             <View style={styles.wrap}>
               {(healthSnapshot?.metrics ?? []).map((metric) => (
                 <MetricPill
@@ -98,12 +113,33 @@ export function ProfileScreen() {
                 />
               ))}
             </View>
+          ) : null}
+          {healthFlags.showUnsavedSummary ? (
+            <Text style={styles.supportingCopy}>
+              This summary is fresh from Apple Health on this device, but it has not saved to the
+              backend yet.
+            </Text>
+          ) : healthFlags.showHistoricalSummary ? (
+            <Card
+              subtitle={`Last saved summary from ${healthSnapshot?.capturedAt ? new Date(healthSnapshot.capturedAt).toLocaleString() : "earlier"}`}
+            >
+              <Text style={styles.supportingCopy}>
+                Apple Health needs another refresh, so these stats are not being treated as live
+                profile data right now.
+              </Text>
+              <Button
+                label="Refresh in account settings"
+                variant="secondary"
+                fullWidth={false}
+                onPress={() => router.push("/(app)/account")}
+              />
+            </Card>
           ) : (
             <EmptyState
               title="No live metrics attached yet"
-              message="The profile still works for demoing identity and consistency, but stronger proof appears after a health sync or a published fallback check-in."
-              actionLabel="Manage health state"
-              onActionPress={() => router.push("/(app)/connections")}
+              message="Your mission, pillars, and consistency are already here. Sync health or publish a manual check-in to add activity details."
+              actionLabel="Manage provider settings"
+              onActionPress={() => router.push("/(app)/account")}
             />
           )}
         </Card>
@@ -135,25 +171,23 @@ export function ProfileScreen() {
         )}
       </View>
 
-      {showDemoControls ? (
-        <Card title="Demo controls" subtitle="Quick reset for repeated walkthroughs.">
-          <Button
-            label="Reset demo session"
-            variant="secondary"
-            fullWidth={false}
-            onPress={() => void resetDemoSession()}
-          />
-        </Card>
-      ) : null}
-
       {authState === "authenticated" ? (
-        <Card title="Account">
-          <Button
-            label="Sign out"
-            variant="ghost"
-            fullWidth={false}
-            onPress={() => void signOut()}
-          />
+        <Card
+          title="Account"
+          subtitle="Providers, session, and account controls live in one private settings surface."
+        >
+          <View style={styles.accountRow}>
+            <Button
+              label="Open account settings"
+              fullWidth={false}
+              variant="secondary"
+              onPress={() => router.push("/(app)/account")}
+            />
+            <Text style={styles.supportingCopy}>
+              Use this hub to manage Apple Health, Strava, WHOOP, sign out, and handle account
+              deletion.
+            </Text>
+          </View>
         </Card>
       ) : null}
     </ScrollScreen>
@@ -210,5 +244,8 @@ const styles = StyleSheet.create({
   supportingCopy: {
     ...theme.typography.bodySmall,
     color: theme.color.fg.secondary,
+  },
+  accountRow: {
+    gap: theme.spacing.sm,
   },
 });

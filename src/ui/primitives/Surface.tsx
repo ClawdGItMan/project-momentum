@@ -18,7 +18,7 @@ export function Surface({ children, elevated = false, style }: SurfaceProps) {
 
 const elevatedShadow =
   Platform.OS === "web"
-    ? ({ boxShadow: "0px 8px 18px rgba(11, 18, 32, 0.12)" } as ViewStyle)
+    ? ({ boxShadow: "0px 12px 28px rgba(11, 28, 48, 0.06)" } as ViewStyle)
     : (theme.shadow.soft as ViewStyle);
 
 const styles = StyleSheet.create({

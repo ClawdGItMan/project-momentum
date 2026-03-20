@@ -2,12 +2,12 @@ import { Easing } from "react-native";
 
 export const motion = {
   duration: {
-    quick: 120,
-    base: 220,
-    slow: 360,
+    quick: 160,
+    base: 240,
+    slow: 320,
   },
   easing: {
-    standard: Easing.out(Easing.cubic),
+    standard: Easing.bezier(0.2, 1, 0.3, 1),
     emphasized: Easing.bezier(0.2, 0.9, 0.2, 1),
     gentle: Easing.inOut(Easing.quad),
   },
@@ -24,4 +24,3 @@ export const motion = {
     },
   },
 } as const;
-

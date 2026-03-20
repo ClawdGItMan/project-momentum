@@ -10,7 +10,7 @@ Turn the raw concept into a validated, prioritized, prototype-ready spec. By the
 
 ## Current Phase
 
-Week 1 moving into founder-alpha integration: the first vertical slice is now backed by hosted Supabase auth/data, with persisted check-ins, owned-squad friend invites plus open-token fallback, and live squad chat added on top of the demo-ready shell.
+Week 1 moving into Phase 2 provider expansion: the first vertical slice is now backed by hosted Supabase auth/data, with persisted check-ins, owned-squad friend invites plus open-token fallback, live squad chat, explicit bootstrap-state routing, an existing-user account hub, backend-backed ownership-transfer plus delete-account actions, a more accurate Apple Health day-summary path, and a new multi-provider layer for Strava plus WHOOP across the backend, account hub, and composer source selection.
 
 ## Desired Outcomes
 
@@ -49,6 +49,7 @@ Week 1 moving into founder-alpha integration: the first vertical slice is now ba
 - set Expo-first architecture assumptions
 - define the design-system-first frontend quality bar
 - upgrade the agent framework from research-heavy to build-ready
+- define a Stitch plus `DESIGN.md` redesign workflow and prompt pack that can generate consistent mobile candidates without reopening product scope
 
 ### Prototype build
 
@@ -59,6 +60,7 @@ Week 1 moving into founder-alpha integration: the first vertical slice is now ba
 - harden the slice for repeatable demos across browser and future Xcode/EAS runs
 - lock the backend stack, core schema, privacy model, and integration boundaries before writing server code
 - add a simple AI-first founder workflow so two non-technical founders can collaborate without getting pulled into developer setup
+- generate App-mode Stitch redesign candidates for the main mobile surfaces, then reimplement the winners through shared React Native primitives rather than raw exported HTML
 
 ## Owners
 
@@ -78,7 +80,10 @@ Week 1 moving into founder-alpha integration: the first vertical slice is now ba
 - a hosted Supabase project linked to the repo with the Phase 0 schema applied and local backend health checks passing
 - a founder-friendly GitHub issue, PR, and dashboard workflow that lets AI do most of the work
 - a Phase 1 founder-alpha mobile path with real auth, backend-backed profile/feed/provider state, persisted check-ins, and live squad chat
-- a founder-alpha Connections surface that can send exact-username friend invites, let users create their own squad, invite existing friends into owned squads, generate and display redeemable invite tokens, and accept friend or squad invite tokens without leaving the app
+- a reliability pass that proves new-account onboarding entry, existing-user Apple Health management, and safe delete-account / ownership-transfer behavior
+- a Phase 2 provider pass that adds Strava and WHOOP server-managed connect/callback/sync/disconnect routes, provider-aware account management, and source-aware composer/provenance UI
+- a founder-alpha Squads surface that can send exact-username friend invites, let users create their own squad, invite existing friends into owned squads, generate and display redeemable invite tokens, and accept friend or squad invite tokens without leaving the app
+- a root `DESIGN.md` plus a Stitch redesign workflow and screen prompt pack for the next polish pass
 - clearer go/no-go view for week two
 
 ## Exit Criteria

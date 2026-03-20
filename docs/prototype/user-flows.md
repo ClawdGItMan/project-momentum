@@ -11,7 +11,8 @@ Let founder-alpha users create a real private account, restore sessions on relau
 1. User lands on the auth screen.
 2. User signs in with email/password or creates an account.
 3. If email confirmation is required, the app shows a confirmation-needed state instead of pretending setup is complete.
-4. Authenticated users continue into onboarding or the main app based on onboarding status.
+4. The app clears any user-scoped local state from the previous account before hydrating the new session.
+5. Authenticated users continue into onboarding or the main app based on explicit bootstrap status, with loading and retry states if bootstrap fails.
 
 ### Success Outcome
 
@@ -45,8 +46,9 @@ Create a visible identity centered on growth, not vanity.
 1. User picks username and short mission line.
 2. User chooses visible focus areas.
 3. User connects Apple Health or falls back to manual setup only if needed.
-4. User optionally selects a live squad they already belong to, or skips.
+4. User can join the starter squad `Day ones`, pick another live squad they already belong to, or skip.
 5. User completes the backend onboarding bootstrap and previews how their profile momentum board and consistency status will look.
+6. After recap, a successful onboarding completion routes straight into the first check-in while the rest of the private account state hydrates in the background.
 
 ### Success Outcome
 
@@ -79,11 +81,12 @@ Make sharing progress structured, fast, and rewarding.
 
 1. User taps a primary post or check-in action.
 2. User selects progress type such as workout, recovery, habit win, or reflection.
-3. User attaches Apple Health metrics or manually enters progress if coverage is unavailable.
-4. User chooses whether the post is private, friend-visible, or shared to a squad.
-5. User adds a short note.
-6. App persists the check-in and attached normalized metrics to Supabase.
-7. User publishes the update.
+3. User chooses a source preference such as Auto, Apple Health, Strava, WHOOP, or manual fallback.
+4. User attaches synced metrics from the selected provider or manually enters progress if coverage is unavailable.
+5. User chooses whether the post is private, friend-visible, or shared to a squad.
+6. User adds a short note.
+7. App persists the check-in and attached normalized metrics to Supabase.
+8. User publishes the update.
 
 ### Success Outcome
 
@@ -118,7 +121,7 @@ Give each squad a lightweight real-time room for coordination and encouragement 
 
 ### Steps
 
-1. User opens a squad from Home or Connections.
+1. User opens a squad from Home or Squads.
 2. App loads only the join-forward message history visible to that member from Supabase and subscribes to realtime inserts.
 3. User sends a short text message into the squad room.
 4. Other active squad members see the new message live.
@@ -128,3 +131,22 @@ Give each squad a lightweight real-time room for coordination and encouragement 
 ### Success Outcome
 
 Squads feel alive and coordinated, while the feed remains the primary proof surface.
+
+## Flow 7: Account And Apple Health Management
+
+### Goal
+
+Give existing users one reliable place to reconnect Apple Health, review saved sync state, sign out, transfer squad ownership, and delete the account safely.
+
+### Steps
+
+1. User opens Account from Profile.
+2. User sees Apple Health, Strava, and WHOOP cards with current state, latest saved summary, latest sync attempt, coverage detail, and any last error.
+3. User taps `Connect`, `Refresh`, `Reconnect`, or `Disconnect` from the relevant provider card without replaying onboarding.
+4. If a refresh fails, the app keeps the last saved summary visible and labels it as older data rather than pretending it is fresh.
+5. If the user owns a multi-member squad, the screen shows transfer actions for active members before deletion can proceed.
+6. User can sign out, or reveal the permanent delete flow, type `DELETE`, and remove the account only after ownership blockers are cleared.
+
+### Success Outcome
+
+Existing users can recover Apple Health, switch accounts cleanly, and handle destructive account actions without breaking squad continuity or leaking stale local state.

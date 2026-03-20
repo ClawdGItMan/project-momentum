@@ -1,13 +1,28 @@
 import { ThemeProvider, type Theme } from "@react-navigation/native";
+import {
+  CormorantGaramond_600SemiBold,
+  CormorantGaramond_700Bold,
+} from "@expo-google-fonts/cormorant-garamond";
+import {
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+  Manrope_800ExtraBold,
+} from "@expo-google-fonts/manrope";
+import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import { useEffect } from "react";
 import "react-native-reanimated";
 import "react-native-url-polyfill/auto";
 
-import { theme } from "@/src/design";
+import { fontFamilies, theme } from "@/src/design";
 import { MomentumSessionProvider } from "@/src/features/app/MomentumSessionProvider";
+
+SplashScreen.preventAutoHideAsync().catch(() => null);
 
 const navigationTheme: Theme = {
   dark: false,
@@ -21,28 +36,48 @@ const navigationTheme: Theme = {
   },
   fonts: {
     regular: {
-      fontFamily: "System",
+      fontFamily: fontFamilies.sansRegular,
       fontWeight: "400",
     },
     medium: {
-      fontFamily: "System",
-      fontWeight: "500",
+      fontFamily: fontFamilies.sansSemiBold,
+      fontWeight: "600",
     },
     bold: {
-      fontFamily: "System",
+      fontFamily: fontFamilies.sansBold,
       fontWeight: "700",
     },
     heavy: {
-      fontFamily: "System",
-      fontWeight: "800",
+      fontFamily: fontFamilies.serifBold,
+      fontWeight: "700",
     },
   },
 };
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    [fontFamilies.serifSemiBold]: CormorantGaramond_600SemiBold,
+    [fontFamilies.serifBold]: CormorantGaramond_700Bold,
+    [fontFamilies.sansRegular]: Manrope_400Regular,
+    [fontFamilies.sansMedium]: Manrope_500Medium,
+    [fontFamilies.sansSemiBold]: Manrope_600SemiBold,
+    [fontFamilies.sansBold]: Manrope_700Bold,
+    [fontFamilies.sansExtraBold]: Manrope_800ExtraBold,
+  });
+
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(theme.color.bg.canvas).catch(() => null);
   }, []);
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync().catch(() => null);
+    }
+  }, [fontError, fontsLoaded]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   return (
     <MomentumSessionProvider>
@@ -53,6 +88,7 @@ export default function RootLayout() {
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(onboarding)" />
           <Stack.Screen name="(app)" />
+          <Stack.Screen name="integrations/[provider]/callback" />
           <Stack.Screen name="modals" options={{ presentation: "modal" }} />
         </Stack>
       </ThemeProvider>

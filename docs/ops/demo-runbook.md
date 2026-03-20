@@ -43,7 +43,7 @@ Show the first believable Project Momentum loop:
    - use `Preview with seeded metrics` for the happiest path
    - or use `Use manual fallback` to show the fallback posture
 4. Complete the first workout check-in and land on Home.
-5. Use the `Connections` tab dev-only demo controls if you need to reset or re-stage Health states while iterating.
+5. Use the `Squads` tab health controls if you need to refresh Apple Health or switch into manual fallback while iterating.
 
 ### With EAS
 
@@ -62,7 +62,7 @@ Use this only on a machine with Expo/EAS credentials configured.
 
 - The session now persists onboarding and in-app demo progress across reloads.
 - Raw Apple Health snapshots are not persisted; published proof and core demo state are.
-- `Connections` includes dev-only controls for preview metrics, live Apple Health attempt, manual fallback, and reset.
+- `Squads` includes the main in-app Apple Health refresh and manual fallback controls, while the hidden dev tools still cover preview metrics, reset, and session restaging.
 - `Home`, `Habits`, and `Check-In` are now scroll-safe for denser states and smaller screens.
 - The HealthKit request is narrowed to the live-first MVP bundle: workouts, steps, sleep, and active energy.
 - The local simulator path has now been verified on `iPhone 17 Pro` with Xcode 26.3 and the Expo development client.

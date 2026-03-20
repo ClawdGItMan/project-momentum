@@ -1,4 +1,5 @@
 import type { HealthProviderAdapter } from "@/src/domain/integrations/adapter";
+import { getSupportedMetricKeys } from "@/src/domain/integrations/catalog";
 import {
   createCoverage,
   normalizeSnapshot,
@@ -10,14 +11,7 @@ import type {
   ProviderSnapshot,
 } from "@/src/domain/integrations/types";
 
-const keys: MetricKey[] = [
-  "workouts",
-  "steps",
-  "sleep-duration",
-  "active-energy",
-  "resting-heart-rate",
-  "mindfulness-minutes",
-];
+const keys: MetricKey[] = getSupportedMetricKeys("strava");
 
 const placeholderCoverage = () =>
   keys.map((key) => createCoverage(key, false, "not_requested"));
@@ -32,7 +26,7 @@ export class StravaAdapter implements HealthProviderAdapter {
   async getConnection(): Promise<ConnectionRecord> {
     return {
       provider: this.provider,
-      state: "mocked",
+      state: "disconnected",
       coverage: placeholderCoverage(),
     };
   }

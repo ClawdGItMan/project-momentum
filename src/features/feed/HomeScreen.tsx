@@ -4,7 +4,8 @@ import { useRouter } from "expo-router";
 
 import { theme } from "@/src/design";
 import { useMomentumSession } from "@/src/features/app/MomentumSessionProvider";
-import { formatConnectionState } from "@/src/lib/formatters";
+import { formatConnectionState, formatProviderLabel } from "@/src/lib/formatters";
+import { managedProviders } from "@/src/lib/providers";
 import { ConsistencyCard } from "@/src/ui/composites/ConsistencyCard";
 import { ProgressPostCard } from "@/src/ui/composites/ProgressPostCard";
 import {
@@ -23,11 +24,10 @@ export function HomeScreen() {
     currentUser,
     dismissPublishedCelebration,
     feedPosts,
-    healthConnection,
-    healthPreviewActive,
     homeSegment,
     lastPublishedPostId,
     manualFallbackEnabled,
+    providerConnections,
     reactToPost,
     setHomeSegment,
     squads,
@@ -42,13 +42,24 @@ export function HomeScreen() {
     homeSegment === "squads"
       ? selectedSquad
         ? post.squadId === selectedSquad.id
-        : Boolean(post.squadId)
-      : post.audience !== "squad",
+        : false
+      : post.audience === "friends",
   );
+  const connectedProviders = managedProviders.filter((provider) => {
+    const state = providerConnections[provider].state;
+    return state === "connected" || state === "connected_limited";
+  });
+  const defaultHealthState = providerConnections["apple-health"];
   const showHealthPrompt =
     manualFallbackEnabled ||
-    (healthConnection.state !== "connected" &&
-      healthConnection.state !== "connected_limited");
+    (defaultHealthState.state !== "connected" &&
+      defaultHealthState.state !== "connected_limited");
+  const lastPublishedAudienceLabel =
+    lastPublishedPost?.audience === "squad"
+      ? lastPublishedPost.squadName ?? "your squad"
+      : lastPublishedPost?.audience === "only-me"
+        ? "Only me"
+        : "Friends";
 
   return (
     <ScrollScreen contentContainerStyle={styles.screenContent}>
@@ -90,9 +101,12 @@ export function HomeScreen() {
               this lane.
             </Text>
             <Text style={styles.bannerCopy}>
-              {formatConnectionState(healthConnection.state)}
-              {healthPreviewActive ? " • demo preview" : ""}
-              {manualFallbackEnabled ? " • manual fallback" : ""}
+              {connectedProviders.length
+                ? `Connected: ${connectedProviders
+                    .map((provider) => formatProviderLabel(provider))
+                    .join(", ")}`
+                : `Default: ${formatConnectionState(defaultHealthState.state)}`}
+              {manualFallbackEnabled ? " • manual entry active" : ""}
             </Text>
           </View>
         </Card>
@@ -134,11 +148,7 @@ export function HomeScreen() {
             elevated
           >
             <Text style={styles.bannerCopy}>
-              Your update is now visible in{" "}
-              {lastPublishedPost.audience === "squad"
-                ? lastPublishedPost.squadName ?? "your squad"
-                : "Friends"}
-              .
+              Your update is now visible in {lastPublishedAudienceLabel}.
             </Text>
             <View style={styles.actions}>
               <Button
@@ -159,18 +169,18 @@ export function HomeScreen() {
 
         {showHealthPrompt ? (
           <Card
-            title="Proof layer still needs attention"
-            subtitle={`${formatConnectionState(healthConnection.state)}${manualFallbackEnabled ? " • manual fallback active" : ""}`}
+            title="Provider sync needs attention"
+            subtitle={`${formatProviderLabel("apple-health")}: ${formatConnectionState(defaultHealthState.state)}${manualFallbackEnabled ? " • manual entry active" : ""}`}
           >
             <Text style={styles.bannerCopy}>
-              The demo can still move with manual fallback, but the strongest path is a
-              healthy Apple Health connection.
+              You can keep posting with manual entry for now, but connected providers make
+              check-ins faster and richer.
             </Text>
             <Button
-              label="Manage health state"
+              label="Manage providers"
               fullWidth={false}
               variant="ghost"
-              onPress={() => router.push("/(app)/connections")}
+              onPress={() => router.push("/(app)/account")}
             />
           </Card>
         ) : null}
@@ -190,18 +200,18 @@ export function HomeScreen() {
             title="No posts in this lane yet"
             message={
               homeSegment === "squads" && !selectedSquad
-                ? "Choose a squad in Connections or switch to Friends while you set up the tighter accountability lane."
+                ? "Choose a squad in Squads or switch to Friends while you set up the tighter accountability lane."
                 : "Your first check-in will land here with the right audience context."
             }
             actionLabel={
               homeSegment === "squads" && !selectedSquad
-                ? "Open connections"
+                ? "Open squads"
                 : "Publish one now"
             }
             onActionPress={() =>
               router.push(
                 homeSegment === "squads" && !selectedSquad
-                  ? "/(app)/connections"
+                  ? "/(app)/squads"
                   : "/(app)/check-in",
               )
             }

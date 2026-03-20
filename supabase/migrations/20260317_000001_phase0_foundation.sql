@@ -358,7 +358,8 @@ create table if not exists public.consistency_rollups (
   workout_contribution numeric(5,4) not null default 0,
   window_start date not null,
   window_end date not null,
-  computed_at timestamptz not null default now()
+  computed_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table if not exists public.provider_connections (

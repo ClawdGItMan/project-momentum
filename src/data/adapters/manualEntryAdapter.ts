@@ -1,4 +1,5 @@
 import type { HealthProviderAdapter } from "@/src/domain/integrations/adapter";
+import { getSupportedMetricKeys } from "@/src/domain/integrations/catalog";
 import {
   createCoverage,
   createWindow,
@@ -69,12 +70,11 @@ export class ManualEntryAdapter implements HealthProviderAdapter {
 
   private coverage() {
     const keys: MetricKey[] = [
-      "workouts",
-      "steps",
-      "sleep-duration",
-      "active-energy",
-      "resting-heart-rate",
-      "mindfulness-minutes",
+      ...new Set([
+        ...getSupportedMetricKeys("apple-health"),
+        ...getSupportedMetricKeys("strava"),
+        ...getSupportedMetricKeys("whoop"),
+      ]),
     ];
     return keys.map((key) =>
       this.values.has(key)

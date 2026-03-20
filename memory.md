@@ -3,6 +3,7 @@
 ## Durable Facts
 
 - Working codename: Project Momentum
+- Visible in-app brand: Outtcast
 - Workspace purpose: founder operating system for research, product definition, prototype planning, and progress tracking
 - Team shape: two-founder sprint over roughly two weeks
 - Primary product thesis: make self-improvement social and culturally aspirational
@@ -13,6 +14,20 @@
 - Current state: Expo Router app scaffold now exists at repo root with `app/`, `src/`, generated `ios/`, seeded MVP state, and a locally verified Xcode simulator launch
 - Friend sharing and squads are both part of the current product direction for v0.1
 - Founder-alpha squad expansion now centers on creating your own squad and inviting existing friends from the squad surface, with open tokens kept as fallback
+- Onboarding should always offer one shared starter squad called `Day ones`
+- Authenticated routing now depends on an explicit bootstrap status, not just raw auth state, so new accounts can reliably enter onboarding and returning users can recover from bootstrap failures without stack flicker
+- Auth-user changes now clear user-scoped frontend state immediately, so onboarding, squad, feed, and Apple Health state should not leak across accounts on the same device
+- Fresh-account setup readiness must come from `auth_accounts.onboarding_completed`, not from the existence of the blank synced `profiles` row that every new auth user gets automatically
+- Consistency refresh helpers must no-op once an `auth.users` row is already being deleted, or account deletion will fail after real check-ins or habit data exist
+- Squad-only check-ins should be deleted with their squad; `check_ins.squad_id` cannot safely use `ON DELETE SET NULL` while `audience = 'squad'` requires a non-null squad id
+- The mobile session/runtime now hydrates provider maps for Apple Health, Strava, and WHOOP from Supabase-backed repository reads, while still exposing Apple Health as the default proof alias for older app surfaces
+- Phase 2 now treats Apple Health, Strava, and WHOOP as the active provider surface in code, with Apple Health device-first and Strava/WHOOP server-managed behind the backend
+- The backend now has a live `service.ts` provider runtime wired into routes and queue workers for remote-provider connect, callback, sync, disconnect, and webhook processing
+- The mobile app now stores provider state as `providerConnections` and `providerSnapshots`, not as one Apple-Health-only session object
+- The current Stitch MCP flow works at the project level with the required `X-Goog-Api-Key` header, and the first onboarding artifact pack now lives in `output/stitch/onboarding-variants/`
+- The current winning Stitch direction is `variant-a`, the mineral-editorial onboarding direction exported from project `projects/289691776004504741`
+- The app now loads the approved `Cormorant Garamond + Manrope` font stack through Expo font loading instead of continuing to approximate the redesign with system faces
+- The repo now has reusable composite helpers for ambient mineral editorial panels and thin-line icon badges under `src/ui/composites/`, intended to support Stitch-like screens without adding one-off visual styling in each screen file
 
 ## Current Decisions
 
@@ -31,7 +46,15 @@
 - The repo now uses a stronger build-first multi-agent framework with explicit design, frontend, backend/integrations, and QA roles.
 - Frontend quality and design-system discipline are now explicit product requirements, not optional polish.
 - Squads remain the primary accountability structure even though friend sharing exists.
-- The product should aim for a premium-fitness visual direction.
+- The product should now aim for a high-end performance visual direction: light-performance, soft luxury mineral contrast, mineral blue palette, fashion-editorial energy, and proof-first hierarchy.
+- The active redesign pass uses Google Stitch in App Mode, backed by a repo-level `DESIGN.md`, without reopening the current product thesis or MVP scope.
+- Stitch outputs should guide visual direction and token extraction, but shipped UI should still be rebuilt through `src/design`, `src/ui`, and `src/features` instead of pasted exported HTML.
+- The approved font stack is `Cormorant Garamond + Manrope`, and the current plan is to ship those real fonts in Expo rather than approximate them with system faces first.
+- The current redesign winner is onboarding-first `variant-a`, and the first implementation batch should be onboarding plus the recap -> first-check-in handoff.
+- The root layout now fails open if Expo font loading errors, so the app cannot hang forever on the splash screen.
+- Shared shell primitives now use `react-native-safe-area-context`, and the mineral status palette now flows through theme-backed badge/error surfaces instead of legacy pastel stopgaps.
+- The closer Stitch-parity pass now treats onboarding choices as large editorial slabs, the profile-basics step as a mission-led identity screen, the Apple Health step as one dominant trust surface plus one support surface, and the first check-in composer as a four-stage ritual instead of a long utility form.
+- The current icon/image policy for the onboarding-first Stitch pass is to use abstract ambient editorial panels, thin-line icons, and monogram stamps instead of shipping real photography assets before a dedicated image pipeline exists.
 - Workouts and habits are the default friend-visible categories.
 - Consistency is a first-class metric derived from completing check-ins and staying on top of habits, including workouts.
 - Apple Health is a required v0.1 integration, with manual entry as fallback only.
@@ -43,8 +66,16 @@
 - The repo now contains a HealthKit config plugin, an iOS prebuild with HealthKit entitlements, and adapter boundaries for Apple Health, manual entry, and Strava.
 - The Apple Health repository now includes a `react-native-health` bridge path plus a seeded preview path for environments where native HealthKit is not available.
 - The Apple Health bridge now falls back to `NativeModules.AppleHealthKit`, normalizes native authorization errors into readable strings, and treats real iPhone debugging as the source of truth instead of hiding behind simulator-era copy.
+- Apple Health summary windows now use local-midnight-to-now for day metrics, plus a separate previous-day-noon lookback to calculate the latest main sleep session more accurately.
 - The app now persists non-sensitive demo session state across reloads, while leaving raw Apple Health snapshots out of persistence.
+- Existing users should manage Apple Health from the private account hub instead of hunting for reconnect controls inside Squads.
+- Account is now the provider control center, and Check-In is now the source-selection surface.
+- Account deletion is now permanent in founder alpha and blocked while the user still owns any multi-member squad; solo-owned squads can disappear with the account.
+- Physical-iPhone account deletion depends on the app reaching the local backend over the Mac's LAN IP, not `localhost`, while `npm run backend:dev` is running.
+- Saved Apple Health summaries must be treated as historical whenever the latest refresh fails; old metrics should stay visible only with explicit stale labeling, not as live current stats.
+- Saved Apple Health summaries should also age out of “live” status when they are older than the current freshness window, even if no explicit refresh error is present.
 - Dev-only demo controls now exist so the team can reset the walkthrough and re-stage Health states without changing product direction.
+- Dev-only demo and sample-state controls should now stay behind a hidden long-press debug surface rather than visible product UI.
 - A dedicated demo runbook now lives in `docs/ops/demo-runbook.md`, and `eas.json` now provides development/internal iOS build profiles.
 - The HealthKit request is now narrowed to the MVP read-only bundle: workouts, steps, sleep, and active energy.
 - `ios/Podfile.properties.json` now enables `ios.buildReactNativeFromSource` because the current repo path with spaces broke React Native prebuilt artifact validation during CocoaPods install.
@@ -62,40 +93,70 @@
 - The mobile app should keep `useMomentumSession()` as its stable facade while backend-backed repositories replace seeded state underneath it.
 - The repo now contains a `supabase/` Phase 0 foundation migration with auth mirroring, profile bootstrap, private social tables, RLS, helper RPCs, and read models for feed/profile/squad views.
 - The repo now contains a Phase 1 Supabase migration for founder-alpha account flows, Apple Health snapshot persistence, persisted check-ins, and live squad chat.
+- The repo now contains a backend/account-deletion slice with a service-role `DELETE /me` route plus a `transfer_squad_ownership` RPC for safe squad ownership handoff.
 - The repo now contains a dedicated `backend/` TypeScript package with a Hono API shell, worker shell, env loading, queue wiring, and backend security helpers.
 - Backend verification currently includes backend dependency install, backend typecheck, backend build, and runtime instantiation with dummy env values.
 - Docker is not available in this environment, so the Supabase migration has not yet been executed against a live local database here.
 - The hosted Supabase project for Project Momentum is now `madwefunqkqppamlgzno` in `us-east-2`.
 - The Phase 0 Supabase migration has been pushed successfully to the hosted project.
+- The hosted project had been missing `20260319090000_join_onboarding_squad.sql`; the function has now been applied directly to remote and PostgREST schema reload has been triggered, but the migration ledger still does not record that version.
 - The local Codex environment is now configured with a Supabase MCP server entry that expects `SUPABASE_ACCESS_TOKEN` as a bearer-token env var.
+- The local Codex environment now also includes a working Google Stitch MCP server entry with the required custom auth header for Stitch App Mode redesign work.
 - A local `backend/.env` now exists for hosted Supabase development, and the Hono API plus worker have been verified against the remote project.
 - The current hosted Supabase pooler only connects cleanly from this machine with a local-only `sslmode=no-verify` connection string.
 - The repo now has a shared `npm run verify` command plus GitHub-side PR/CI scaffolding for safer parallel work.
 - The repo now has an opt-in `.githooks/pre-push` guard, enabled by `npm run setup:hooks`, that blocks direct pushes to `main` in each local clone and runs `npm run verify` before pushes.
 - The simplified collaboration model is now AI-first and issue-first: founders work through GitHub issues and pull requests, while Max remains the default Build Owner and Merge Owner.
 - The mobile app now uses Supabase auth gating plus direct RLS-aware views and RPCs for onboarding, feed/profile/habit/provider bootstrap, persisted check-ins, and squad chat.
-- Founder-alpha connections now include exact-username friend invites, squad creation, and token-based friend or squad invite acceptance directly in the app.
-- Founder-alpha Connections now surfaces the raw generated invite tokens for both friend and squad flows because pending-invite inboxes and deep-link polish are deferred until after alpha validation.
-- Owned squads are now the primary squad-invite surface in Connections, with direct friend-targeted invite tokens for existing friends and one open-token fallback for broader handoff.
+- Visible UI copy should use Outtcast product language and avoid mentioning prototype stage, founder alpha, MVP framing, demo realism, or internal validation goals.
+- `Day ones` is now the default joinable starter squad during onboarding, while squad creation and invite flows live in the top-level Squads tab.
+- Founder-alpha squads now include exact-username friend invites, squad creation, and token-based friend or squad invite acceptance directly in the app.
+- The top-level Squads tab now surfaces the raw generated invite tokens for both friend and squad flows because pending-invite inboxes and deep-link polish are deferred until after alpha validation.
+- Owned squads are now the primary squad-invite surface in the Squads tab, with direct friend-targeted invite tokens for existing friends and one open-token fallback for broader handoff.
+- `/connections` now survives only as a hidden legacy redirect so older fallbacks and links still land on the Squads surface cleanly during the IA transition.
 - The onboarding recap now needs to surface backend bootstrap errors explicitly because username conflicts can happen at the final onboarding commit point, not only at auth time.
 - Real onboarding should not carry a seeded squad selection; stale local squad ids now get dropped before onboarding completion and before a friends-visible check-in publish.
+- Client-facing Supabase RPC names should be exposed from `public` as thin wrappers over `app_private` so mobile `supabase.rpc(...)` calls work without weakening the trust boundary; the hosted founder-alpha database was patched directly from `backend/.env` because the current CLI migration history is still using legacy date-prefix filenames.
+- The `squad memberships are visible to squad members` policy now uses `app_private.is_active_squad_member(...)` instead of a self-referential `exists (...) from public.squad_memberships`, so authenticated setup reads no longer hit infinite RLS recursion.
+- Apple Health sync should distinguish `HealthKit connected locally but backend save failed` from true permissions or bridge failures, and the onboarding screen should always prefer the real backend/native error over generic retry copy.
+- The shared `app_private.touch_updated_at()` trigger now uses a row-shape-safe update strategy so consistency recomputes no longer crash onboarding or other writes that pass through trigger-backed tables.
+- The hosted founder-alpha database now uses `app_private.can_view_squad_membership(...)` and helper-based squad visibility policies so `squad_memberships` reads no longer recurse during founder-alpha bootstrap or chat hydration.
 - Squad chat optimistic sends now use UUID client ids so the mobile client matches the backend idempotency contract for realtime rooms.
 - Shared `ScrollScreen` containers now auto-adjust iPhone keyboard insets so auth, onboarding, and other text-entry flows keep fields reachable while typing.
 - The shared Xcode project now explicitly declares the HealthKit system capability in addition to the entitlement file so device builds are less likely to drift into a signed-without-HealthKit state.
+- The bug-catcher audit on 2026-03-18 found and fixed several session-layer/runtime issues: sign-out now clears persisted per-user drafts, demo-visible actions no longer call authenticated Supabase flows, squad chat demo mode stays local, real posts are now marked as current-user posts, and `Only me` posts no longer show up as Friends-lane content.
+- Onboarding completion now treats a successful `complete_onboarding` RPC as authoritative for first-app entry: while the write is in flight the session provider pauses auto-bootstrap, then it marks the session ready immediately and hydrates the rest of the account state in the background without allowing stale or partial bootstrap reads to reset the user into onboarding.
+- Workout check-ins should publish from completed manual fallback details whenever synced workout metrics are missing, and the composer should surface the real publish error text instead of collapsing non-`Error` failures into generic copy.
+- The primary tab route is now `/(app)/squads`, while `/(app)/connections` remains a hidden legacy redirect for old links and internal fallbacks.
+- Default habit creation should choose an unused suggested title and surface the real write error when creation fails, instead of silently appearing to do nothing.
 
 ## Working Assumptions
 
 - Max is the primary workspace operator referenced in the original notes.
 - A co-founder or close collaborator is sharing product thinking and interview outreach responsibilities.
 - The first prototype should demonstrate clear flows with Apple Health treated as mandatory and manual entry used only when connection or coverage falls short.
+- Outtcast is the product name users should see, while Project Momentum can remain the internal workspace codename until a broader rename is worth the churn.
 - Health metrics sharing, habit tracking, onboarding, profiles, and daily progress posting form the minimum viable prototype surface.
 - High conviction after two weeks is required to continue toward full development.
 - The first believable experience should emphasize selective trusted audiences over public audience mechanics.
 - Apple Health is the required first live integration target.
 - Strava should be added live only if it is clearly low-friction during implementation.
-- The visual direction should feel premium fitness: clean, high-quality, restrained color, and a few strong animations.
+- The visual direction should feel high-end performance, mineral, proof-first, and editorial on top while remaining technical in the body.
+- The first Stitch exploration pass should preserve the current screen map and core v0.1 flows, focusing on feel, hierarchy, and desirability more than IA or feature changes.
+- The first approved Stitch reference is the onboarding-first `variant-a` system, with `variant-b` restraint and a little `variant-c` ritual energy as secondary inspirations.
+- `Thinking with 3 Pro` and `2.5 Pro` should be the main Stitch candidate modes for Outtcast product screens, while `Redesign` should be used for vibe exploration from current screenshots and `Fast` stays optional for rough or Figma-first sketches.
 - The seeded preview bridge is acceptable during UI iteration, but the real `react-native-health` bridge should be treated as the intended path and validated on a physical iPhone development build.
 - If Apple Health still reports `needs_attention` on a physical iPhone after a rebuild, the next likely blockers are Health permissions, missing HealthKit-capable signing, or limited same-day Health data, not the old simulator-only fallback path.
+- Until the hosted Supabase migration history is repaired, schema hotfixes may need direct SQL application from the Build Owner machine even when the checked-in migration file is the source of truth.
+- The current founder-alpha backend has been directly verified with authenticated test users for both `record_apple_health_snapshot` and `complete_onboarding`, so the immediate mobile path is no longer blocked by the earlier RPC exposure and trigger issues.
+- The current founder-alpha backend has now also been verified with an authenticated test user who owns a real squad and can read `squad_memberships` plus `squad_chat_overviews` without triggering `42P17` recursion.
+- The hosted Apple Health save-plus-refresh path has now been verified with app-shaped enum values too: `record_apple_health_snapshot` can persist a `connected` snapshot, and the immediate follow-up refresh can still read provider state, squad memberships, and squad chat overviews successfully.
+- Assumption for the 2026-03-20 onboarding handoff fix: the immediate post-onboarding bootstrap read can temporarily lag, race, or arrive partial even when `complete_onboarding` succeeded, so the mobile session should trust the successful write for first-app entry and treat follow-up bootstrap reads as hydration.
+- Existing users now have a dedicated `/account` settings hub in the app shell for Apple Health state, reconnect/refresh, sign-out, delete account, and ownership transfer; Profile now routes there instead of using sign-out as the only account action.
+- The current founder-alpha backend has also been verified with the delete-account guard and the ownership transfer RPC: a squad owner with active members is blocked from deletion until transferring ownership, and the squad survives after the old owner is deleted.
+- The current founder-alpha backend has now also been verified against the exact previously failing delete-account shape: an onboarded user with Apple Health snapshots plus persisted check-ins can be deleted successfully after the consistency-delete guard patch is applied remotely.
+- The backend listener is reachable locally on both `127.0.0.1:8787` and `172.18.234.54:8787`, so the remaining delete-account risk is mobile runtime config or app reload state rather than the backend process itself.
+- Fresh Apple Health reads that succeed locally but fail to persist should still remain visible on-device as local summaries instead of snapping back to the previous saved snapshot.
 - `npm` is the local package-manager fallback for this repo because `pnpm` was not available in the current environment.
 - This specific environment now has full Xcode installed, so verification can include simulator launch in addition to web export, Expo web runtime, and iOS prebuild.
 - For future collaborators, cloning into a path without spaces is the preferred local setup even though the current repo now contains compatibility patches for the spaced path.
@@ -104,8 +165,18 @@
 - The first auth path should be Supabase email/password plus a server-backed onboarding bootstrap, with Sign in with Apple deferred until after the private social core is stable.
 - The direct mobile path should prefer hosted Supabase views and RPCs over a localhost-only backend dependency whenever the operation does not require privileged server secrets.
 - Squad chat is part of Phase 1, but it should remain a private text-only support layer under the feed-first product thesis.
+- Non-workout check-ins should be allowed to publish caption-first even when Apple Health has no usable metrics, while workout posts still require either synced workout data or explicit manual fallback details.
+- Existing users should land in a dedicated account/settings hub rather than replaying onboarding, while destructive account operations remain backend-backed and intentionally gated through `DELETE /me` plus ownership transfer where needed.
 - Existing apps like Strava or WHOOP only affect Phase 1 insofar as their data already lands in Apple Health; there is no live provider-specific sync UX yet.
+- Phase 2 source precedence is now Apple Health > Strava > WHOOP > manual for workouts, and WHOOP > Apple Health > manual for recovery.
+- The Phase 2 mobile UX keeps Apple Health as the default source but exposes explicit provider management in Account, source selection in Check-in, provider callback deep links, and lightweight provenance in feed/profile surfaces.
+- The composer should show honest provider freshness state: fresh synced data, historical saved data, local unsaved device data, disconnected provider state, and manual fallback.
+- Remote-provider disconnect should stop live sync state while leaving historical posts and normalized snapshots readable.
+- Physical iPhone retests should always restart Metro after env changes so `EXPO_PUBLIC_BACKEND_URL` and related runtime config reach the dev build cleanly.
+- Physical iPhone retests for Apple Health should compare the app against the Health app’s day-based totals and last main sleep session, not a rolling 24-hour mental model.
+- Physical iPhone delete-account retests should use a fully quit-and-reopened dev build after backend/runtime fixes so stale cached JS does not mask the hosted Supabase behavior.
 - The current backend local-dev path should keep secrets in `backend/.env` only; mobile env surfaces must not receive `DATABASE_URL`, service-role keys, session secrets, or provider client secrets.
+- The account-management backend slice was verified live against the hosted Supabase project using temporary founder-alpha users, a pre-transfer 409 delete block, a successful ownership transfer RPC, and a successful post-transfer `DELETE /me`.
 - The team should treat GitHub branches and PRs as the shared workspace, with `main` reserved for reviewed, passing work.
 - Private-repo branch protection is not available on the current GitHub plan, so local hooks and team working agreement are the current enforcement layer.
 - By default, only the Build Owner machine should keep the full local build setup and `backend/.env`; the cofounder should not need local setup or secrets.
@@ -115,17 +186,22 @@
 
 ## Open Questions
 
-- What final brand name best captures the product without sounding cheesy or niche?
+- When should the repo/package identifiers fully migrate from the Project Momentum codename to Outtcast, if at all?
 - How strong does the real on-device Apple Health connection feel compared with the current preview bridge?
 - Should Strava stay adapter-backed in v0.1 or become the second live integration after Apple Health?
 - Does WHOOP belong in the first live backend wave after Strava, or should the schema support it while the live launch waits until after sprint validation?
 - When do we want to expose Sign in with Apple relative to the first backend-connected prototype?
 - What founder-alpha invite UX should survive past this phase: raw token paste, generated deep links, or both?
+- Do we want to fully remove the older backend provider helper generation in `backend/src/lib/providers/` now that `service.ts` is the active runtime, or reconcile them into one shared implementation first?
+- How much real WHOOP surface should land in the profile/feed story before it starts overpowering the simpler “proof first” product thesis?
+- Do we want remote-provider refresh to stay manual in founder alpha, or queue periodic reconciles once Strava and WHOOP credentials are live?
 - Do we need a pending-invites inbox before broader alpha, or is generated-token sharing enough for the next round of two-account testing?
 - How much squad chat capability should be added before it starts diluting the feed-first thesis?
 - Do we want pending invite surfaces in-app next, or is token acceptance plus direct invite send enough for the first founder-alpha round?
 - How explicit should “leveling up” be in the first user experience?
 - Which next slice will increase conviction fastest after the current vertical slice: deeper feed interaction, stronger profile storytelling, or milestone treatment?
+- How much of `variant-c`'s sport-luxury activation energy should be pulled into the first-check-in handoff without breaking the softer onboarding tone?
+- Once Stitch screen-level exports are healthier, do we want a second pass for more detailed Home / Check-in / Profile references before the React Native implementation moves beyond onboarding?
 - Should the repo stay in a path with spaces long-term, or should it move to a no-space path once the immediate demo cycle ends?
 - Do we want to standardize on the current local Supabase pooler SSL workaround for all collaborators, or should we move to another verified connection path before broader backend adoption?
 
@@ -148,9 +224,28 @@
 
 - Current phase: Week 1: research plus first MVP build session
 - Current phase detail: the first slice is now demo-hardened and Phase 1-connected, with Supabase auth, persisted social data, Apple Health upload plumbing, generated invite-token flows, and live squad chat alongside the demo fallback path
+- Reliability pass detail: founder-alpha routing now uses bootstrap-status gating, new accounts should enter onboarding cleanly, and existing users can manage Apple Health plus destructive account actions from Account instead of replaying setup
+- Onboarding handoff detail: recap completion now moves the user into an app-ready state as soon as the onboarding RPC succeeds, then refreshes the rest of the private account data in the background without letting a stale or partial bootstrap read knock the session back to `needs_onboarding`.
+- Phase 2 detail: the app now has provider-aware account management, source selection in the composer, deep-link callback handling for remote providers, backend sync/disconnect routes for Strava and WHOOP, and lightweight provider provenance on posts/profile surfaces
+- Onboarding squad detail: the `Day ones` join CTA now has a live hosted RPC again after the missing `public.join_onboarding_squad(...)` function was patched directly onto the remote project and smoke-tested with a temporary authenticated user
+- Runtime honesty detail: failed Apple Health refreshes now preserve the last saved summary only as historical data across the account hub, profile, composer, and metric-detail surfaces
+- Runtime accuracy detail: Apple Health now reads a day-based summary and uses merged sleep-session logic, while client rehydration preserves the real saved window metadata from Supabase
+- Provider expansion detail: Strava and WHOOP are implemented in code but still need real credentials plus live device/account validation before they can be considered demo-proven
+- Design system detail: the repo now has a root `DESIGN.md`, a Stitch redesign workflow, and a screen prompt pack to keep the next visual pass consistent and implementation-ready
+- Stitch execution detail: the current local artifact pack now includes three onboarding variants, a winner note, and exported project-level theme files under `output/stitch/onboarding-variants/`
+- Design implementation detail: the mineral-editorial system is now partially translated into app code through updated tokens, typography, buttons, chips, text fields, segmented controls, onboarding chrome, recap styling, and the first-check-in hero/header
+- Design implementation detail: the shell hardening pass now protects the app from font-loading hangs, uses safe-area-context for shared screens, and keeps button/style callbacks compatible with Pressable callers
+- Design implementation detail: the closer 1:1 pass now covers the onboarding structure itself, not just the tokens: larger editorial selection slabs, mission-led profile identity, a tighter health connection hierarchy, a custom recap handoff screen, and a four-stage check-in composer that verified cleanly in the exported web demo flow
+- Design implementation detail: the newest pass adds more visible iconography and image-like composition through ambient mineral panels on Welcome, monogram identity/recap stamps, health trust icon badges, icon-backed selection slabs, and icon-enabled segmented controls in first check-in
+- Delete reliability detail: hosted Supabase now has a checked-in migration that guards consistency recomputes during cascading user deletion and aligns squad-only post deletion with the squad FK semantics
+- Bug audit detail: browser validation now confirms that the hidden demo session can open squad chat and send demo messages without backend console errors, while `npm run verify` still passes after the session-layer fixes.
 - Apple Health device validation detail: the repo now surfaces native bridge and authorization errors more honestly, but the installed iPhone app must be rebuilt after these native/bridge fixes before live permission testing is meaningful.
+- Apple Health backend validation detail: the hosted project now has live `public` RPC wrappers and an authenticated test confirmed `record_apple_health_snapshot` can insert a real snapshot row through the same mobile RPC contract the app uses.
+- Onboarding backend validation detail: the hosted project now has the safe `touch_updated_at()` function applied directly, and direct SQL verification confirmed `complete_onboarding` can finish again after the consistency recompute path runs.
+- Squad RLS validation detail: the hosted project now has the explicit recursion-fix migration applied, and authenticated bootstrap reads against real squad membership rows now succeed instead of failing on `public.squad_memberships`.
+- Apple Health refresh validation detail: a hosted Supabase test user can now save a valid `apple-health` snapshot and immediately complete the provider-plus-squad refresh cycle without any RLS or provider-state errors.
 - Current backend status: Phase 0 scaffolded in code; the source of truth is now `docs/ops/backend-build-plan.md`
-- Current backend remote status: hosted Supabase project linked and schema pushed through Phase 1; local API and worker boot against it, and the mobile app now reads and writes directly against hosted Supabase for founder-alpha flows
+- Current backend remote status: hosted Supabase project linked and schema pushed through Phase 1; local API and worker boot against it, and the mobile app now reads and writes directly against hosted Supabase for founder-alpha flows; delete-account and ownership-transfer behavior is now verified live against that same remote project.
 - Founder OS setup: in progress
 - Product framing: seeded
 - External messaging artifact: seeded

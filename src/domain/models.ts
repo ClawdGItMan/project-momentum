@@ -3,6 +3,7 @@ export type {
   ConnectionState,
   CoverageReason,
   IntegrationProvider,
+  ManagedIntegrationProvider,
   MetricCoverage,
   MetricKey,
   MetricSource,

@@ -1,13 +1,13 @@
 import React, { PropsWithChildren } from "react";
 import {
   Platform,
-  SafeAreaView,
   ScrollView,
-  ScrollViewProps,
-  StyleProp,
+  type ScrollViewProps,
+  type StyleProp,
   StyleSheet,
-  ViewStyle,
+  type ViewStyle,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { theme } from "@/src/design";
 
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing.xxl,
   },
   padded: {
-    paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
   },
 });

@@ -5,10 +5,11 @@ import { theme } from "@/src/design/theme";
 
 const selectedShadow =
   Platform.OS === "web"
-    ? ({ boxShadow: "0px 8px 18px rgba(11, 18, 32, 0.12)" } as ViewStyle)
+    ? ({ boxShadow: "0px 10px 20px rgba(11, 28, 48, 0.05)" } as ViewStyle)
     : (theme.shadow.soft as ViewStyle);
 
 type SegmentedOption<T extends string> = {
+  icon?: React.ReactNode;
   label: string;
   value: T;
 };
@@ -34,9 +35,16 @@ export function SegmentedControl<T extends string>({
             onPress={() => onChange(option.value)}
             style={[styles.segment, selected && styles.segmentSelected]}
           >
-            <Text style={[styles.label, selected && styles.labelSelected]}>
-              {option.label}
-            </Text>
+            <View style={styles.segmentContent}>
+              {option.icon ? (
+                <View style={[styles.iconWrap, selected && styles.iconWrapSelected]}>
+                  {option.icon}
+                </View>
+              ) : null}
+              <Text style={[styles.label, selected && styles.labelSelected]}>
+                {option.label}
+              </Text>
+            </View>
           </Pressable>
         );
       })}
@@ -50,20 +58,34 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.pill,
     borderWidth: theme.borderWidth.regular,
     borderColor: theme.color.stroke.subtle,
-    backgroundColor: theme.color.bg.surface,
-    padding: 3,
-    gap: 2,
+    backgroundColor: theme.color.bg.elevated,
+    padding: 4,
+    gap: 4,
   },
   segment: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: theme.radius.pill,
-    minHeight: 36,
+    minHeight: 42,
+    paddingHorizontal: theme.spacing.sm,
   },
   segmentSelected: {
-    backgroundColor: theme.color.bg.elevated,
+    backgroundColor: theme.color.bg.surface,
     ...selectedShadow,
+  },
+  segmentContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.xs,
+  },
+  iconWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconWrapSelected: {
+    transform: [{ translateY: -0.5 }],
   },
   label: {
     ...theme.typography.label,

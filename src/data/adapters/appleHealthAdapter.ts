@@ -120,7 +120,12 @@ export class AppleHealthAdapter implements HealthProviderAdapter {
     const targetWindow =
       window ??
       createWindow(
-        new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+        (() => {
+          const now = new Date();
+          const start = new Date(now);
+          start.setHours(0, 0, 0, 0);
+          return start.toISOString();
+        })(),
         new Date().toISOString(),
         "today",
       );
@@ -143,6 +148,9 @@ export class AppleHealthAdapter implements HealthProviderAdapter {
       .map((key) => {
         const metric = result[key];
         if (!metric || metric.value == null) return null;
+        const explicitAvailability =
+          typeof metric.available === "boolean" ? metric.available : true;
+        if (!explicitAvailability) return null;
         return normalizeMetricValue(this.provider, targetWindow, {
           key,
           value: metric.value,
