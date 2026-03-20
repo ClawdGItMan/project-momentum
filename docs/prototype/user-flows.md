@@ -48,6 +48,7 @@ Create a visible identity centered on growth, not vanity.
 3. User connects Apple Health or falls back to manual setup only if needed.
 4. User can join the starter squad `Day ones`, pick another live squad they already belong to, or skip.
 5. User completes the backend onboarding bootstrap and previews how their profile momentum board and consistency status will look.
+6. After recap, a successful onboarding completion routes straight into the first check-in while the rest of the private account state hydrates in the background.
 
 ### Success Outcome
 

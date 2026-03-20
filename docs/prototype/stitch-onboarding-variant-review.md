@@ -112,6 +112,7 @@ Use these ideas from the non-winning variants when rebuilding the app:
 - Apple Health onboarding is now collapsed into a stronger trust surface plus a secondary coverage/privacy surface instead of three stacked utility cards
 - recap is now a custom single-moment handoff screen instead of a standard step shell plus a separate recap card
 - the first check-in flow now follows a four-stage ritual (`Move`, `Room`, `Proof`, `Seal`) instead of a long stack of parallel utility panels
+- the newest parity pass adds more visible iconography and image-like composition: ambient mineral panels on Welcome, icon-backed editorial slabs across the choice steps, monogram identity/recap stamps, health trust icon badges, and icon-enabled segmented controls inside first check-in
 
 ## Latest Verification
 
@@ -120,8 +121,10 @@ Use these ideas from the non-winning variants when rebuilding the app:
 - `git diff --check`
 - `npx expo export --platform web`
 - browser check of the new check-in flow through the hidden demo session on the exported web bundle
+- exported onboarding routes still redirect behind auth in browser QA, so the latest icon/image pass is currently verified through type/build/export rather than a clean signed-out walkthrough
 
 ## Remaining Gaps
 
 - web browser QA for the pure onboarding routes is still awkward because the real route group is auth-gated; static export is clean, but the easiest live browser walkthrough still needs either a signed-in not-yet-onboarded state or a dedicated preview path
+- the app still uses abstract ambient editorial panels instead of real stitched photo assets, so a later pass can decide whether true imagery is worth the extra asset and performance complexity
 - Home, Profile, Squads, and Account still need the same tighter Stitch-parity pass that onboarding and first check-in just received

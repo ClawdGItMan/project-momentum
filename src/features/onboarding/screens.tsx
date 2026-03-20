@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { type Href, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 import { theme } from "@/src/design";
 import {
@@ -31,7 +32,11 @@ import {
   StatRow,
   TextField,
 } from "@/src/ui/primitives";
-import { ConsistencyCard } from "@/src/ui/composites/ConsistencyCard";
+import {
+  AmbientEditorialPanel,
+  ConsistencyCard,
+  EditorialIconBadge,
+} from "@/src/ui/composites";
 
 type StepShellProps = {
   step: number;
@@ -43,53 +48,104 @@ type StepShellProps = {
   footer: React.ReactNode;
 };
 
+type IconName = React.ComponentProps<typeof Ionicons>["name"];
+
 const goalEditorialCopy: Record<
   (typeof goalOptions)[number],
-  { eyebrow: string; subtitle: string; note?: string }
+  { eyebrow: string; subtitle: string; note?: string; icon: IconName }
 > = {
   "Train more consistently": {
     eyebrow: "Steady rhythm",
     subtitle: "Build a visible cadence so your circle sees the reps, not just the intention.",
+    icon: "barbell-outline",
   },
   "Sleep 7+ hours": {
     eyebrow: "Recovery first",
     subtitle: "Make better sleep part of the proof layer instead of a private guess.",
+    icon: "moon-outline",
   },
   "Build mental sharpness": {
     eyebrow: "Clear focus",
     subtitle: "Track the habits that keep your head clean when the week gets crowded.",
+    icon: "sparkles-outline",
   },
   "Stay accountable with friends": {
     eyebrow: "Trusted people",
     subtitle: "Keep your effort visible to people who know your baseline and want you to win.",
+    icon: "people-outline",
   },
   "Finish what I start": {
     eyebrow: "Follow-through",
     subtitle: "Let the app recognize consistency, not just big declarations.",
+    icon: "checkmark-circle-outline",
   },
 };
 
 const pillarEditorialCopy: Record<
   FocusPillar,
-  { eyebrow: string; subtitle: string }
+  { eyebrow: string; subtitle: string; icon: IconName }
 > = {
   fitness: {
     eyebrow: "Movement",
     subtitle: "Workouts, physical effort, and the proof that you showed up.",
+    icon: "barbell-outline",
   },
   mindset: {
     eyebrow: "State of mind",
     subtitle: "Mental clarity, discipline, and the systems that keep you steady.",
+    icon: "sparkles-outline",
   },
   learning: {
     eyebrow: "Growth",
     subtitle: "Reading, studying, and the work that expands your range over time.",
+    icon: "book-outline",
   },
   recovery: {
     eyebrow: "Repair",
     subtitle: "Sleep, restoration, and the signals that keep momentum sustainable.",
+    icon: "moon-outline",
   },
 };
+
+const sharingEditorialCopy: Record<
+  AccountabilityStyle,
+  { eyebrow: string; title: string; subtitle: string; icon: IconName; note?: string }
+> = {
+  friends: {
+    eyebrow: "Accountability lane",
+    title: "Friends keep me honest",
+    subtitle: "Mutual accountability with people who already know your baseline.",
+    icon: "people-outline",
+  },
+  "squad-first": {
+    eyebrow: "Accountability lane",
+    title: "A squad keeps me committed",
+    subtitle:
+      "Private groups give your progress a shared rhythm and stronger accountability.",
+    icon: "shield-checkmark-outline",
+    note: "Tighter rhythm",
+  },
+  mixed: {
+    eyebrow: "Accountability lane",
+    title: "I need both",
+    subtitle: "Friends for daily proof, squads for a tighter rhythm.",
+    icon: "layers-outline",
+  },
+};
+
+function getInitials(name?: string) {
+  const source = name?.trim();
+  if (!source) {
+    return "OM";
+  }
+
+  const parts = source.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+
+  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+}
 
 function StepShell({
   step,
@@ -142,6 +198,7 @@ function StepShell({
 
 function SelectionSlab({
   eyebrow,
+  icon,
   title,
   subtitle,
   selected,
@@ -149,6 +206,7 @@ function SelectionSlab({
   metaLabel,
 }: {
   eyebrow: string;
+  icon?: IconName;
   title: string;
   subtitle: string;
   selected: boolean;
@@ -161,12 +219,27 @@ function SelectionSlab({
       style={[styles.selectionSlab, selected && styles.selectionSlabSelected]}
     >
       <View style={styles.selectionSlabTop}>
-        <Text style={styles.selectionEyebrow}>{eyebrow}</Text>
-        {selected ? (
-          <Badge label="Selected" tone="accent" />
-        ) : metaLabel ? (
-          <Text style={styles.selectionMeta}>{metaLabel}</Text>
-        ) : null}
+        <View style={styles.selectionLead}>
+          {icon ? (
+            <View style={styles.selectionIconTile}>
+              <View style={styles.selectionIconGlowPrimary} />
+              <View style={styles.selectionIconGlowSecondary} />
+              <Ionicons
+                name={icon}
+                size={22}
+                color={selected ? theme.color.accent.energy : theme.color.fg.secondary}
+              />
+            </View>
+          ) : null}
+          <Text style={styles.selectionEyebrow}>{eyebrow}</Text>
+        </View>
+        <View style={styles.selectionStatus}>
+          {selected ? (
+            <Badge label="Selected" tone="accent" />
+          ) : metaLabel ? (
+            <Text style={styles.selectionMeta}>{metaLabel}</Text>
+          ) : null}
+        </View>
       </View>
       <Text style={styles.selectionTitle}>{title}</Text>
       <Text style={styles.selectionSubtitle}>{subtitle}</Text>
@@ -215,18 +288,24 @@ export function WelcomeScreen() {
       </LinearGradient>
 
       <View style={styles.welcomeGrid}>
-        <View style={styles.welcomePanel}>
-          <Text style={styles.welcomePanelTitle}>Trusted circle</Text>
-          <Text style={styles.welcomePanelBody}>
-            Share progress where effort is understood instead of broadcast.
-          </Text>
-        </View>
-        <View style={styles.welcomePanel}>
-          <Text style={styles.welcomePanelTitle}>Health-backed proof</Text>
-          <Text style={styles.welcomePanelBody}>
-            Let Apple Health support the story without making your life public.
-          </Text>
-        </View>
+        <AmbientEditorialPanel
+          title="Trusted circle"
+          description="Share progress where effort is understood instead of broadcast."
+          eyebrow="Selective social"
+          icon="users"
+          badgeLabel="Private lane"
+          tone="cobalt"
+          style={styles.welcomeMoodPanel}
+        />
+        <AmbientEditorialPanel
+          title="Health-backed proof"
+          description="Let Apple Health support the story without making your life public."
+          eyebrow="Proof layer"
+          icon="activity"
+          badgeLabel="Signal first"
+          tone="teal"
+          style={styles.welcomeMoodPanel}
+        />
       </View>
 
       <Card
@@ -284,6 +363,7 @@ export function GoalsScreen() {
           <SelectionSlab
             key={goal}
             eyebrow={goalEditorialCopy[goal].eyebrow}
+            icon={goalEditorialCopy[goal].icon}
             title={goal}
             subtitle={goalEditorialCopy[goal].subtitle}
             selected={selected.includes(goal)}
@@ -336,6 +416,7 @@ export function PillarsScreen() {
           <SelectionSlab
             key={pillar.value}
             eyebrow={pillarEditorialCopy[pillar.value].eyebrow}
+            icon={pillarEditorialCopy[pillar.value].icon}
             title={pillar.label}
             subtitle={pillarEditorialCopy[pillar.value].subtitle}
             selected={selected.includes(pillar.value)}
@@ -359,28 +440,6 @@ export function SharingScreen() {
   const { onboardingDraft, setAccountabilityStyle } = useMomentumSession();
   const selected = onboardingDraft.accountabilityStyle;
 
-  const options: {
-    value: AccountabilityStyle;
-    title: string;
-    subtitle: string;
-  }[] = [
-    {
-      value: "friends",
-      title: "Friends keep me honest",
-      subtitle: "Mutual accountability with people who already know your baseline.",
-    },
-    {
-      value: "squad-first",
-      title: "A squad keeps me committed",
-      subtitle: "Private groups give your progress a shared rhythm and stronger accountability.",
-    },
-    {
-      value: "mixed",
-      title: "I need both",
-      subtitle: "Friends for daily proof, squads for a tighter rhythm.",
-    },
-  ];
-
   return (
     <StepShell
       step={3}
@@ -396,15 +455,19 @@ export function SharingScreen() {
       }
     >
       <View style={styles.stack}>
-        {options.map((option) => (
+        {(Object.entries(sharingEditorialCopy) as [
+          AccountabilityStyle,
+          (typeof sharingEditorialCopy)[AccountabilityStyle],
+        ][]).map(([value, option]) => (
           <SelectionSlab
-            key={option.value}
-            eyebrow="Accountability lane"
+            key={value}
+            eyebrow={option.eyebrow}
+            icon={option.icon}
             title={option.title}
             subtitle={option.subtitle}
-            selected={selected === option.value}
-            onPress={() => setAccountabilityStyle(option.value)}
-            metaLabel={option.value === "squad-first" ? "Tighter rhythm" : undefined}
+            selected={selected === value}
+            onPress={() => setAccountabilityStyle(value)}
+            metaLabel={option.note}
           />
         ))}
       </View>
@@ -473,6 +536,28 @@ export function ProfileBasicsScreen() {
         end={{ x: 1, y: 1 }}
         style={styles.identityHero}
       >
+        <View style={styles.identityHeroTop}>
+          <View style={styles.identityStamp}>
+            <LinearGradient
+              colors={[theme.color.bg.surface, "#E5EEFF", "#C9DCF8"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.identityStampFill}
+            >
+              <View style={styles.identityStampGlowPrimary} />
+              <View style={styles.identityStampGlowSecondary} />
+              <Text style={styles.identityStampText}>{getInitials(name)}</Text>
+            </LinearGradient>
+          </View>
+          <View style={styles.identitySignalRow}>
+            <EditorialIconBadge icon="user" label="Mission-led" tone="cobalt" />
+            <EditorialIconBadge
+              icon="shield"
+              label="Trusted circle"
+              tone="graphite"
+            />
+          </View>
+        </View>
         <Text style={styles.identityEyebrow}>Mission-led profile</Text>
         <Text style={styles.identityMission}>
           {missionLine || "Write the line that tells people what you are building toward."}
@@ -618,6 +703,16 @@ export function ConnectHealthScreen() {
         subtitle="Syncing makes your updates faster, clearer, and more grounded in what you actually did."
         elevated
       >
+        <View style={styles.healthSignalRow}>
+          <EditorialIconBadge icon="activity" label="Live proof" tone="teal" compact />
+          <EditorialIconBadge icon="lock" label="Private summary" tone="graphite" compact />
+          <EditorialIconBadge
+            icon="shield"
+            label="Trusted by default"
+            tone="champagne"
+            compact
+          />
+        </View>
         <View style={styles.row}>
           <Badge
             label={formatConnectionState(healthConnection.state)}
@@ -785,6 +880,7 @@ export function SquadStepScreen() {
           <SelectionSlab
             key={squad.id}
             eyebrow={squad.handle === "day-ones" ? "Starter room" : "Private squad"}
+            icon={squad.handle === "day-ones" ? "people-circle-outline" : "shield-outline"}
             title={squad.name}
             subtitle={`${squad.memberCount} people • ${squad.currentFocus}`}
             selected={currentUser.selectedSquadId === squad.id}
@@ -862,6 +958,24 @@ export function RecapScreen() {
         end={{ x: 1, y: 1 }}
         style={styles.recapHero}
       >
+        <View style={styles.recapTopRow}>
+          <View style={styles.recapStamp}>
+            <LinearGradient
+              colors={[theme.color.bg.surface, "#E5EEFF", "#C9DCF8"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.recapStampFill}
+            >
+              <View style={styles.recapStampGlowPrimary} />
+              <View style={styles.recapStampGlowSecondary} />
+              <Text style={styles.recapStampText}>{getInitials(currentUser.name)}</Text>
+            </LinearGradient>
+          </View>
+          <View style={styles.recapBadgeColumn}>
+            <EditorialIconBadge icon="activity" label="Ready to post" tone="cobalt" />
+            <EditorialIconBadge icon="users" label="Trusted room" tone="graphite" />
+          </View>
+        </View>
         <Text style={styles.recapEyebrow}>Your lane is ready</Text>
         <Text style={styles.recapHeroTitle}>You’re set up to show the work.</Text>
         <Text style={styles.recapHeroBody}>
@@ -954,22 +1068,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: theme.spacing.sm,
   },
-  welcomePanel: {
+  welcomeMoodPanel: {
     flex: 1,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.color.bg.surface,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.color.stroke.subtle,
-    padding: theme.spacing.md,
-    gap: theme.spacing.xs,
-  },
-  welcomePanelTitle: {
-    ...theme.typography.label,
-    color: theme.color.fg.primary,
-  },
-  welcomePanelBody: {
-    ...theme.typography.bodySmall,
-    color: theme.color.fg.secondary,
+    minHeight: 220,
   },
   stepHeader: {
     gap: theme.spacing.md,
@@ -1037,6 +1138,56 @@ const styles = StyleSheet.create({
     color: theme.color.accent.energy,
     letterSpacing: 0.8,
   },
+  identityHeroTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: theme.spacing.md,
+  },
+  identityStamp: {
+    width: 112,
+    height: 124,
+    borderRadius: theme.radius.lg,
+    overflow: "hidden",
+    borderWidth: theme.borderWidth.hairline,
+    borderColor: theme.color.stroke.subtle,
+    backgroundColor: theme.color.bg.surface,
+  },
+  identityStampFill: {
+    flex: 1,
+    justifyContent: "flex-end",
+    padding: theme.spacing.md,
+  },
+  identityStampGlowPrimary: {
+    position: "absolute",
+    width: 88,
+    height: 88,
+    borderRadius: 88,
+    top: -14,
+    right: -8,
+    backgroundColor: "rgba(122, 163, 214, 0.26)",
+  },
+  identityStampGlowSecondary: {
+    position: "absolute",
+    width: 76,
+    height: 76,
+    borderRadius: 76,
+    left: -12,
+    bottom: -10,
+    backgroundColor: "rgba(243, 224, 202, 0.42)",
+  },
+  identityStampText: {
+    ...theme.typography.hero,
+    color: theme.color.fg.primary,
+    letterSpacing: -1.4,
+  },
+  identitySignalRow: {
+    flex: 1,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    gap: theme.spacing.xs,
+  },
   identityMission: {
     ...theme.typography.heading,
     fontFamily: theme.typography.title.fontFamily,
@@ -1077,11 +1228,50 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: theme.spacing.sm,
   },
+  selectionLead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    flexShrink: 1,
+  },
+  selectionIconTile: {
+    width: 56,
+    height: 56,
+    borderRadius: theme.radius.md,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.color.bg.elevated,
+    borderWidth: theme.borderWidth.hairline,
+    borderColor: theme.color.stroke.subtle,
+  },
+  selectionIconGlowPrimary: {
+    position: "absolute",
+    width: 64,
+    height: 64,
+    borderRadius: 64,
+    top: -16,
+    right: -10,
+    backgroundColor: "rgba(92, 142, 206, 0.22)",
+  },
+  selectionIconGlowSecondary: {
+    position: "absolute",
+    width: 48,
+    height: 48,
+    borderRadius: 48,
+    left: -10,
+    bottom: -8,
+    backgroundColor: "rgba(243, 224, 202, 0.34)",
+  },
   selectionEyebrow: {
     ...theme.typography.caption,
     color: theme.color.fg.muted,
     textTransform: "uppercase",
     letterSpacing: 1,
+  },
+  selectionStatus: {
+    alignItems: "flex-end",
+    justifyContent: "center",
   },
   selectionMeta: {
     ...theme.typography.caption,
@@ -1131,12 +1321,66 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: theme.spacing.xs,
   },
+  healthSignalRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.xs,
+  },
   recapHero: {
     borderRadius: theme.radius.lg,
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.color.stroke.subtle,
     padding: theme.spacing.lg,
     gap: theme.spacing.md,
+  },
+  recapTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: theme.spacing.md,
+  },
+  recapStamp: {
+    width: 92,
+    height: 108,
+    borderRadius: theme.radius.md,
+    overflow: "hidden",
+    borderWidth: theme.borderWidth.hairline,
+    borderColor: theme.color.stroke.subtle,
+    backgroundColor: theme.color.bg.surface,
+  },
+  recapStampFill: {
+    flex: 1,
+    justifyContent: "flex-end",
+    padding: theme.spacing.md,
+  },
+  recapStampGlowPrimary: {
+    position: "absolute",
+    width: 72,
+    height: 72,
+    borderRadius: 72,
+    top: -14,
+    right: -6,
+    backgroundColor: "rgba(92, 142, 206, 0.24)",
+  },
+  recapStampGlowSecondary: {
+    position: "absolute",
+    width: 56,
+    height: 56,
+    borderRadius: 56,
+    left: -8,
+    bottom: -10,
+    backgroundColor: "rgba(243, 224, 202, 0.38)",
+  },
+  recapStampText: {
+    ...theme.typography.heading,
+    fontFamily: theme.typography.title.fontFamily,
+    color: theme.color.fg.primary,
+    letterSpacing: -0.8,
+  },
+  recapBadgeColumn: {
+    flex: 1,
+    alignItems: "flex-end",
+    gap: theme.spacing.xs,
   },
   recapEyebrow: {
     ...theme.typography.caption,

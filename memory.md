@@ -27,6 +27,7 @@
 - The current Stitch MCP flow works at the project level with the required `X-Goog-Api-Key` header, and the first onboarding artifact pack now lives in `output/stitch/onboarding-variants/`
 - The current winning Stitch direction is `variant-a`, the mineral-editorial onboarding direction exported from project `projects/289691776004504741`
 - The app now loads the approved `Cormorant Garamond + Manrope` font stack through Expo font loading instead of continuing to approximate the redesign with system faces
+- The repo now has reusable composite helpers for ambient mineral editorial panels and thin-line icon badges under `src/ui/composites/`, intended to support Stitch-like screens without adding one-off visual styling in each screen file
 
 ## Current Decisions
 
@@ -53,6 +54,7 @@
 - The root layout now fails open if Expo font loading errors, so the app cannot hang forever on the splash screen.
 - Shared shell primitives now use `react-native-safe-area-context`, and the mineral status palette now flows through theme-backed badge/error surfaces instead of legacy pastel stopgaps.
 - The closer Stitch-parity pass now treats onboarding choices as large editorial slabs, the profile-basics step as a mission-led identity screen, the Apple Health step as one dominant trust surface plus one support surface, and the first check-in composer as a four-stage ritual instead of a long utility form.
+- The current icon/image policy for the onboarding-first Stitch pass is to use abstract ambient editorial panels, thin-line icons, and monogram stamps instead of shipping real photography assets before a dedicated image pipeline exists.
 - Workouts and habits are the default friend-visible categories.
 - Consistency is a first-class metric derived from completing check-ins and staying on top of habits, including workouts.
 - Apple Health is a required v0.1 integration, with manual entry as fallback only.
@@ -123,6 +125,7 @@
 - Shared `ScrollScreen` containers now auto-adjust iPhone keyboard insets so auth, onboarding, and other text-entry flows keep fields reachable while typing.
 - The shared Xcode project now explicitly declares the HealthKit system capability in addition to the entitlement file so device builds are less likely to drift into a signed-without-HealthKit state.
 - The bug-catcher audit on 2026-03-18 found and fixed several session-layer/runtime issues: sign-out now clears persisted per-user drafts, demo-visible actions no longer call authenticated Supabase flows, squad chat demo mode stays local, real posts are now marked as current-user posts, and `Only me` posts no longer show up as Friends-lane content.
+- Onboarding completion now treats a successful `complete_onboarding` RPC as authoritative for first-app entry: while the write is in flight the session provider pauses auto-bootstrap, then it marks the session ready immediately and hydrates the rest of the account state in the background without allowing stale or partial bootstrap reads to reset the user into onboarding.
 - Workout check-ins should publish from completed manual fallback details whenever synced workout metrics are missing, and the composer should surface the real publish error text instead of collapsing non-`Error` failures into generic copy.
 - The primary tab route is now `/(app)/squads`, while `/(app)/connections` remains a hidden legacy redirect for old links and internal fallbacks.
 - Default habit creation should choose an unused suggested title and surface the real write error when creation fails, instead of silently appearing to do nothing.
@@ -148,6 +151,7 @@
 - The current founder-alpha backend has been directly verified with authenticated test users for both `record_apple_health_snapshot` and `complete_onboarding`, so the immediate mobile path is no longer blocked by the earlier RPC exposure and trigger issues.
 - The current founder-alpha backend has now also been verified with an authenticated test user who owns a real squad and can read `squad_memberships` plus `squad_chat_overviews` without triggering `42P17` recursion.
 - The hosted Apple Health save-plus-refresh path has now been verified with app-shaped enum values too: `record_apple_health_snapshot` can persist a `connected` snapshot, and the immediate follow-up refresh can still read provider state, squad memberships, and squad chat overviews successfully.
+- Assumption for the 2026-03-20 onboarding handoff fix: the immediate post-onboarding bootstrap read can temporarily lag, race, or arrive partial even when `complete_onboarding` succeeded, so the mobile session should trust the successful write for first-app entry and treat follow-up bootstrap reads as hydration.
 - Existing users now have a dedicated `/account` settings hub in the app shell for Apple Health state, reconnect/refresh, sign-out, delete account, and ownership transfer; Profile now routes there instead of using sign-out as the only account action.
 - The current founder-alpha backend has also been verified with the delete-account guard and the ownership transfer RPC: a squad owner with active members is blocked from deletion until transferring ownership, and the squad survives after the old owner is deleted.
 - The current founder-alpha backend has now also been verified against the exact previously failing delete-account shape: an onboarded user with Apple Health snapshots plus persisted check-ins can be deleted successfully after the consistency-delete guard patch is applied remotely.
@@ -221,6 +225,7 @@
 - Current phase: Week 1: research plus first MVP build session
 - Current phase detail: the first slice is now demo-hardened and Phase 1-connected, with Supabase auth, persisted social data, Apple Health upload plumbing, generated invite-token flows, and live squad chat alongside the demo fallback path
 - Reliability pass detail: founder-alpha routing now uses bootstrap-status gating, new accounts should enter onboarding cleanly, and existing users can manage Apple Health plus destructive account actions from Account instead of replaying setup
+- Onboarding handoff detail: recap completion now moves the user into an app-ready state as soon as the onboarding RPC succeeds, then refreshes the rest of the private account data in the background without letting a stale or partial bootstrap read knock the session back to `needs_onboarding`.
 - Phase 2 detail: the app now has provider-aware account management, source selection in the composer, deep-link callback handling for remote providers, backend sync/disconnect routes for Strava and WHOOP, and lightweight provider provenance on posts/profile surfaces
 - Onboarding squad detail: the `Day ones` join CTA now has a live hosted RPC again after the missing `public.join_onboarding_squad(...)` function was patched directly onto the remote project and smoke-tested with a temporary authenticated user
 - Runtime honesty detail: failed Apple Health refreshes now preserve the last saved summary only as historical data across the account hub, profile, composer, and metric-detail surfaces
@@ -231,6 +236,7 @@
 - Design implementation detail: the mineral-editorial system is now partially translated into app code through updated tokens, typography, buttons, chips, text fields, segmented controls, onboarding chrome, recap styling, and the first-check-in hero/header
 - Design implementation detail: the shell hardening pass now protects the app from font-loading hangs, uses safe-area-context for shared screens, and keeps button/style callbacks compatible with Pressable callers
 - Design implementation detail: the closer 1:1 pass now covers the onboarding structure itself, not just the tokens: larger editorial selection slabs, mission-led profile identity, a tighter health connection hierarchy, a custom recap handoff screen, and a four-stage check-in composer that verified cleanly in the exported web demo flow
+- Design implementation detail: the newest pass adds more visible iconography and image-like composition through ambient mineral panels on Welcome, monogram identity/recap stamps, health trust icon badges, icon-backed selection slabs, and icon-enabled segmented controls in first check-in
 - Delete reliability detail: hosted Supabase now has a checked-in migration that guards consistency recomputes during cascading user deletion and aligns squad-only post deletion with the squad FK semantics
 - Bug audit detail: browser validation now confirms that the hidden demo session can open squad chat and send demo messages without backend console errors, while `npm run verify` still passes after the session-layer fixes.
 - Apple Health device validation detail: the repo now surfaces native bridge and authorization errors more honestly, but the installed iPhone app must be rebuilt after these native/bridge fixes before live permission testing is meaningful.

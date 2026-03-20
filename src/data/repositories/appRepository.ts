@@ -26,7 +26,7 @@ import { supabase } from "@/src/lib/supabase/client";
 type ProfileOverviewRow = {
   user_id: string;
   display_name: string | null;
-  username: string;
+  username: string | null;
   mission_line: string | null;
   city: string | null;
   pillars: FocusPillar[] | null;
@@ -37,6 +37,21 @@ type ProfileOverviewRow = {
   consistency_score: number | null;
   consistency_label: ConsistencyResult["label"] | null;
 };
+
+type BootstrapProfileRow = {
+  user_id: string;
+  display_name: string | null;
+  username: string | null;
+  mission_line: string | null;
+  city: string | null;
+  pillars: FocusPillar[] | null;
+  goals: string[] | null;
+  accountability_style: AccountabilityStyle;
+  default_audience: AudienceVisibility;
+  selected_squad_id: string | null;
+};
+
+type ProfileRowLike = ProfileOverviewRow | BootstrapProfileRow;
 
 type AuthAccountRow = {
   onboarding_completed: boolean | null;
@@ -287,11 +302,11 @@ function toPostMetricValue(value: string | number | boolean | null) {
   return value;
 }
 
-function mapProfile(row: ProfileOverviewRow): UserProfile {
+function mapProfile(row: ProfileRowLike): UserProfile {
   return {
     id: row.user_id,
-    name: row.display_name ?? row.username,
-    username: row.username,
+    name: row.display_name ?? row.username ?? "",
+    username: row.username ?? "",
     missionLine: row.mission_line ?? "",
     city: row.city ?? "",
     pillars: row.pillars ?? [],
@@ -544,8 +559,8 @@ export async function bootstrapOnboarding(payload: {
   accountabilityStyle: AccountabilityStyle;
   defaultAudience: AudienceVisibility;
   selectedSquadId?: string;
-}) {
-  const { error } = await supabase.rpc("complete_onboarding", {
+}): Promise<UserProfile> {
+  const { error, data } = await supabase.rpc("complete_onboarding", {
     p_display_name: payload.name,
     p_username: payload.username,
     p_mission_line: payload.missionLine,
@@ -558,6 +573,13 @@ export async function bootstrapOnboarding(payload: {
   });
 
   if (error) throw error;
+
+  const row = (Array.isArray(data) ? data[0] : data) as BootstrapProfileRow | null;
+  if (!row) {
+    throw new Error("Onboarding finished, but the profile payload was empty.");
+  }
+
+  return mapProfile(row);
 }
 
 export async function fetchAppBootstrapData(userId: string): Promise<AppBootstrapData> {

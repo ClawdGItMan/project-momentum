@@ -462,6 +462,9 @@ export function MomentumSessionProvider({
   const activeSquadChatRef = useRef<string | null>(null);
   const authUserIdRef = useRef<string | null>(null);
   const handledIntegrationUrlsRef = useRef<Set<string>>(new Set());
+  const bootstrapRequestIdRef = useRef(0);
+  const onboardingCompletionInFlightRef = useRef(false);
+  const onboardingBootstrapConfirmationRef = useRef(false);
 
   const healthConnection =
     providerConnections[defaultManagedProvider] ?? defaultConnection;
@@ -508,6 +511,31 @@ export function MomentumSessionProvider({
     chatSubscriptions.current = {};
   };
 
+  const syncUserProfileState = (
+    user: UserProfile,
+    consistencySnapshot?: Pick<ConsistencyResult, "score" | "label">,
+  ) => {
+    setCurrentUser(user);
+    setOnboardingDraft({
+      goals: user.goals,
+      pillars: user.pillars,
+      accountabilityStyle: user.accountabilityStyle,
+      defaultAudience: user.defaultAudience ?? onboardingDraftSeed.defaultAudience,
+      name: user.name,
+      username: user.username,
+      missionLine: user.missionLine,
+      city: user.city ?? "",
+      selectedSquadId: user.selectedSquadId,
+    });
+    setConsistency(
+      buildConsistency(
+        consistencySnapshot?.score,
+        consistencySnapshot?.label,
+        user.pillars,
+      ),
+    );
+  };
+
   const resetUserScopedState = () => {
     disconnectChatSubscriptions();
     setOnboardingComplete(false);
@@ -534,7 +562,8 @@ export function MomentumSessionProvider({
   const applyBackendData = async (
     options: { mode?: "bootstrap" | "refresh" } = {},
   ) => {
-    if (!authSession?.user.id) {
+    const requestUserId = authSession?.user.id;
+    if (!requestUserId) {
       resetUserScopedState();
       setBootstrapStatus("idle");
       setBootstrapError(null);
@@ -542,52 +571,50 @@ export function MomentumSessionProvider({
     }
 
     const mode = options.mode ?? "bootstrap";
+    const requestId = ++bootstrapRequestIdRef.current;
+    const shouldApplyResponse = () =>
+      bootstrapRequestIdRef.current === requestId &&
+      authUserIdRef.current === requestUserId;
+
     if (mode === "bootstrap") {
       setBootstrapStatus("loading");
       setBootstrapError(null);
     }
 
     try {
-      const data = await fetchAppBootstrapData(authSession.user.id);
+      const data = await fetchAppBootstrapData(requestUserId);
+      if (!shouldApplyResponse()) {
+        return;
+      }
       const isOnboarded = Boolean(data.currentUser);
 
+      if (!isOnboarded && onboardingBootstrapConfirmationRef.current) {
+        return;
+      }
+
+      if (isOnboarded) {
+        onboardingBootstrapConfirmationRef.current = false;
+      }
+
       setOnboardingComplete(isOnboarded);
-      setCurrentUser(data.currentUser ?? emptyUser);
       setFriends(data.friends);
       setSquads(data.squads);
       setHabits(data.habits);
       setFeedPosts(data.feedPosts);
       setProviderConnections(toProviderConnectionMap(data.providerConnections));
       setProviderSnapshots(toProviderSnapshotMap(data.providerSnapshots));
-      setConsistency(
-        data.currentUser
-          ? buildConsistency(
-              data.consistency.score,
-              data.consistency.label,
-              data.currentUser.pillars,
-            )
-          : buildConsistency(undefined, undefined, onboardingDraftSeed.pillars),
-      );
       setChatOverviews(data.chatOverviews);
       setBootstrapStatus(isOnboarded ? "ready" : "needs_onboarding");
       setBootstrapError(null);
 
       if (data.currentUser) {
-        const liveUser = data.currentUser;
-        setOnboardingDraft({
-          goals: liveUser.goals,
-          pillars: liveUser.pillars,
-          accountabilityStyle: liveUser.accountabilityStyle,
-          defaultAudience: liveUser.defaultAudience ?? onboardingDraftSeed.defaultAudience,
-          name: liveUser.name,
-          username: liveUser.username,
-          missionLine: liveUser.missionLine,
-          city: liveUser.city ?? "",
-          selectedSquadId: liveUser.selectedSquadId,
-        });
+        syncUserProfileState(data.currentUser, data.consistency);
+      } else {
+        setCurrentUser(emptyUser);
+        setConsistency(buildConsistency(undefined, undefined, onboardingDraftSeed.pillars));
       }
     } catch (error) {
-      if (mode === "bootstrap") {
+      if (mode === "bootstrap" && shouldApplyResponse()) {
         setBootstrapStatus("error");
         setBootstrapError(
           getErrorMessage(
@@ -603,6 +630,10 @@ export function MomentumSessionProvider({
   const handleAuthSessionChange = (session: Session | null) => {
     const nextUserId = session?.user.id ?? null;
     const userChanged = authUserIdRef.current !== nextUserId;
+
+    bootstrapRequestIdRef.current += 1;
+    onboardingCompletionInFlightRef.current = false;
+    onboardingBootstrapConfirmationRef.current = false;
 
     if (userChanged) {
       resetUserScopedState();
@@ -760,6 +791,7 @@ export function MomentumSessionProvider({
 
   useEffect(() => {
     if (!authReady || authState !== "authenticated" || !authSession?.user.id) return;
+    if (onboardingCompletionInFlightRef.current) return;
     if (
       bootstrapStatus !== "idle" &&
       bootstrapStatus !== "loading" &&
@@ -1212,11 +1244,12 @@ export function MomentumSessionProvider({
       }));
     }
 
+    onboardingCompletionInFlightRef.current = true;
     setBootstrapStatus("loading");
     setBootstrapError(null);
 
     try {
-      await bootstrapOnboarding({
+      const completedUser = await bootstrapOnboarding({
         name: onboardingDraft.name,
         username: onboardingDraft.username,
         missionLine: onboardingDraft.missionLine,
@@ -1228,7 +1261,23 @@ export function MomentumSessionProvider({
         selectedSquadId,
       });
 
-      await applyBackendData({ mode: "bootstrap" });
+      onboardingBootstrapConfirmationRef.current = true;
+      setOnboardingComplete(true);
+      setBootstrapStatus("ready");
+      setBootstrapError(null);
+      syncUserProfileState(completedUser);
+      setCheckInDraft((current) => {
+        const nextDraft = {
+          ...current,
+          squadId: current.squadId ?? selectedSquadId,
+        };
+
+        return {
+          ...nextDraft,
+          ...normalizeCheckInDraftSelection(nextDraft, squads),
+        };
+      });
+      void applyBackendData({ mode: "refresh" }).catch(() => null);
     } catch (error) {
       setBootstrapStatus("error");
       setBootstrapError(
@@ -1238,6 +1287,8 @@ export function MomentumSessionProvider({
         ),
       );
       throw error;
+    } finally {
+      onboardingCompletionInFlightRef.current = false;
     }
   };
 

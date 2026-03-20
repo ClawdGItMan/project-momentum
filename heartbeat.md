@@ -29,6 +29,8 @@ Week 1 moving into Phase 2 provider expansion and Stitch-driven UI hardening: th
 - Max: the winning mineral-editorial direction is now partially translated into code through real font loading, updated tokens, refreshed primitives, a redesigned onboarding shell, and a stronger recap -> first check-in handoff
 - Max: the current hardening pass fixed the splash-screen font deadlock path, switched shared screen primitives to `react-native-safe-area-context`, made `Button` accept functional styles safely, and pulled badge/error states closer to the mineral theme
 - Max: the closer Stitch-parity pass now rebuilds onboarding choices as editorial slabs, makes profile setup mission-led, collapses Apple Health onboarding into fewer stronger surfaces, and turns first check-in into a four-stage ritual instead of a long utility stack
+- Max: reusable composite helpers now exist for ambient mineral editorial panels and thin-line icon badges, so later screen passes can pull in more icons and image-like slabs without duplicating styling
+- Max: the latest parity pass adds more visible icons, ambient image-like panels, monogram identity stamps, and icon-led check-in controls so the onboarding flow reads more like the exported Stitch winner and less like text-heavy setup UI
 - Max: onboarding -> Apple Health -> squad suggestion -> first workout check-in -> seeded Home vertical slice
 - Max: second-pass onboarding tightening so the screens track the exported Stitch composition more closely instead of reading like a generic utility wizard
 - Max: adapter-first Apple Health / manual / Strava architecture, `react-native-health` bridge wiring, and iOS prebuild with HealthKit entitlements
@@ -68,6 +70,7 @@ Week 1 moving into Phase 2 provider expansion and Stitch-driven UI hardening: th
 - Max: a public `transfer_squad_ownership` RPC now moves squad ownership safely by requiring the current owner plus an active target member, then promoting/demoting membership roles atomically
 - Max: auth-user changes now clear user-scoped frontend state immediately, so a brand-new signup can no longer inherit stale onboarding, squad, or Apple Health state from the previous account
 - Max: route gating now waits on an explicit bootstrap status with real loading and retry states instead of flashing the wrong stack or dropping authenticated users into blank transitions
+- Max: onboarding completion now treats a successful onboarding write as immediately app-ready, pauses auto-bootstrap during the write, and hydrates the rest of account state in the background so recap -> first check-in cannot bounce back into setup from a stale or partial bootstrap read
 - Max: the account hub now owns Apple Health reconnect/refresh, ownership-transfer actions, and typed-confirmation delete account instead of hiding health recovery inside the Squads surface
 - Max: physical-iPhone account deletion now resolves the backend URL at request time, documents the required Mac LAN host, and has a live backend listener verified on both `127.0.0.1:8787` and `172.18.234.54:8787`
 - Max: failed Apple Health refreshes now keep old summaries explicitly historical across Account, Profile, composer, and metric-detail surfaces instead of presenting stale saved values as current live stats
@@ -140,6 +143,7 @@ Week 1 moving into Phase 2 provider expansion and Stitch-driven UI hardening: th
 - Max: map the winning Stitch onboarding direction into Expo tokens, typography, buttons, chips, text fields, and progress indicators
 - Max: finish the remaining onboarding surface polish so every step, Apple Health state, and squad choice screen feels coherent in the new mineral-editorial system
 - Max: deepen the first check-in screen beyond the new hero treatment so the full composer feels like a fast ritual, not a utility form
+- Max: do a real device visual QA pass on the new icon-forward onboarding and check-in surfaces, especially slab density, ambient panel contrast, and touch comfort
 - Max: move the same design system into Home, Check-in, and Profile after the onboarding-first implementation pass is stable
 - Max: add real Strava credentials plus webhook verify token to the backend env, complete a live connect on device, and verify recent activity backfill into Account and Check-in
 - Max: add real WHOOP credentials plus webhook secret/verify config, complete a live device connect, and verify recovery plus workout summaries into Account and Check-in
@@ -159,4 +163,4 @@ High on the product and app direction, high on backend foundation direction, and
 
 ## Last Updated
 
-2026-03-20 00:24 EDT
+2026-03-20 10:27 EDT

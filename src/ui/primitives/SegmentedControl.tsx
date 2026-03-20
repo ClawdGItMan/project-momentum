@@ -9,6 +9,7 @@ const selectedShadow =
     : (theme.shadow.soft as ViewStyle);
 
 type SegmentedOption<T extends string> = {
+  icon?: React.ReactNode;
   label: string;
   value: T;
 };
@@ -34,9 +35,16 @@ export function SegmentedControl<T extends string>({
             onPress={() => onChange(option.value)}
             style={[styles.segment, selected && styles.segmentSelected]}
           >
-            <Text style={[styles.label, selected && styles.labelSelected]}>
-              {option.label}
-            </Text>
+            <View style={styles.segmentContent}>
+              {option.icon ? (
+                <View style={[styles.iconWrap, selected && styles.iconWrapSelected]}>
+                  {option.icon}
+                </View>
+              ) : null}
+              <Text style={[styles.label, selected && styles.labelSelected]}>
+                {option.label}
+              </Text>
+            </View>
           </Pressable>
         );
       })}
@@ -60,10 +68,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: theme.radius.pill,
     minHeight: 42,
+    paddingHorizontal: theme.spacing.sm,
   },
   segmentSelected: {
     backgroundColor: theme.color.bg.surface,
     ...selectedShadow,
+  },
+  segmentContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.xs,
+  },
+  iconWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconWrapSelected: {
+    transform: [{ translateY: -0.5 }],
   },
   label: {
     ...theme.typography.label,

@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { Feather } from "@expo/vector-icons";
 
 import type { ManagedIntegrationProvider } from "@/src/domain/models";
 import { theme } from "@/src/design";
@@ -26,6 +27,7 @@ import {
   pickProviderForCheckIn,
 } from "@/src/lib/providers";
 import { ProgressPostCard } from "@/src/ui/composites/ProgressPostCard";
+import { EditorialIconBadge } from "@/src/ui/composites";
 import {
   Badge,
   Button,
@@ -37,6 +39,8 @@ import {
   SegmentedControl,
   TextField,
 } from "@/src/ui/primitives";
+
+type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim().length > 0) {
@@ -86,20 +90,29 @@ export function CheckInScreen() {
   const [providerError, setProviderError] = useState<string | null>(null);
   const [providerBusy, setProviderBusy] = useState<ManagedIntegrationProvider | null>(null);
 
-  const postTypeOptions: { label: string; value: PostType }[] = [
-    { label: "Workout", value: "workout" },
-    { label: "Habit win", value: "habit-win" },
-    { label: "Recovery", value: "recovery" },
-    { label: "Reflection", value: "reflection" },
+  const iconFor = (name: FeatherIconName, active: boolean) => (
+    <Feather
+      name={name}
+      size={14}
+      color={active ? theme.color.accent.energy : theme.color.fg.secondary}
+    />
+  );
+
+  const postTypeOptions: { icon: React.ReactNode; label: string; value: PostType }[] = [
+    { label: "Workout", value: "workout", icon: iconFor("activity", checkInDraft.type === "workout") },
+    { label: "Habit win", value: "habit-win", icon: iconFor("check-circle", checkInDraft.type === "habit-win") },
+    { label: "Recovery", value: "recovery", icon: iconFor("moon", checkInDraft.type === "recovery") },
+    { label: "Reflection", value: "reflection", icon: iconFor("edit-3", checkInDraft.type === "reflection") },
   ];
 
   const selectedSquad = squads.find((squad) => squad.id === currentUser.selectedSquadId);
   const squadAvailable = Boolean(selectedSquad);
-  const audienceOptions: { label: string; value: AudienceVisibility }[] = [
-    { label: "Only me", value: "only-me" },
-    { label: "Friends", value: "friends" },
+  const audienceOptions: { icon: React.ReactNode; label: string; value: AudienceVisibility }[] = [
+    { label: "Only me", value: "only-me", icon: iconFor("lock", checkInDraft.audience === "only-me") },
+    { label: "Friends", value: "friends", icon: iconFor("users", checkInDraft.audience === "friends") },
     ...(squadAvailable
-      ? ([{ label: "Squad", value: "squad" }] as {
+      ? ([{ label: "Squad", value: "squad", icon: iconFor("shield", checkInDraft.audience === "squad") }] as {
+          icon: React.ReactNode;
           label: string;
           value: AudienceVisibility;
         }[])
@@ -110,8 +123,8 @@ export function CheckInScreen() {
     () => getSupportedProvidersForPostType(checkInDraft.type),
     [checkInDraft.type],
   );
-  const sourceOptions: { label: string; value: CheckInSourcePreference }[] = [
-    { label: "Auto", value: "auto" },
+  const sourceOptions: { icon: React.ReactNode; label: string; value: CheckInSourcePreference }[] = [
+    { label: "Auto", value: "auto", icon: iconFor("star", checkInDraft.sourcePreference === "auto") },
     ...supportedProviders.map((provider) => ({
       label:
         provider === "apple-health"
@@ -119,9 +132,15 @@ export function CheckInScreen() {
           : provider === "strava"
             ? "Strava"
             : "WHOOP",
+      icon:
+        provider === "apple-health"
+          ? iconFor("heart", checkInDraft.sourcePreference === provider)
+          : provider === "strava"
+            ? iconFor("map", checkInDraft.sourcePreference === provider)
+            : iconFor("moon", checkInDraft.sourcePreference === provider),
       value: provider,
     })),
-    { label: "Manual", value: "manual" },
+    { label: "Manual", value: "manual", icon: iconFor("edit-3", checkInDraft.sourcePreference === "manual") },
   ];
 
   const sourceSelection = pickProviderForCheckIn({
@@ -327,13 +346,28 @@ export function CheckInScreen() {
               clean note.
             </Text>
           </View>
+          <View style={styles.heroSignalRow}>
+            <EditorialIconBadge icon="activity" label="Proof first" tone="inverse" compact />
+            <EditorialIconBadge icon="users" label="Trusted lane" tone="inverse" compact />
+          </View>
         </LinearGradient>
 
         <View style={styles.sequenceRail}>
-          {["Move", "Room", "Proof", "Seal"].map((step) => (
-            <View key={step} style={styles.sequenceStep}>
-              <View style={styles.sequenceDot} />
-              <Text style={styles.sequenceLabel}>{step}</Text>
+          {[
+            { icon: "activity" as const, label: "Move" },
+            { icon: "users" as const, label: "Room" },
+            { icon: "layers" as const, label: "Proof" },
+            { icon: "check-circle" as const, label: "Seal" },
+          ].map((step) => (
+            <View key={step.label} style={styles.sequenceStep}>
+              <View style={styles.sequenceIconTile}>
+                <Feather
+                  name={step.icon}
+                  size={14}
+                  color={theme.color.accent.energy}
+                />
+              </View>
+              <Text style={styles.sequenceLabel}>{step.label}</Text>
             </View>
           ))}
         </View>
@@ -570,6 +604,11 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: theme.spacing.xs,
   },
+  heroSignalRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.xs,
+  },
   sequenceRail: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -580,11 +619,15 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xxs,
     alignItems: "center",
   },
-  sequenceDot: {
-    width: 8,
-    height: 8,
+  sequenceIconTile: {
+    width: 34,
+    height: 34,
     borderRadius: theme.radius.pill,
-    backgroundColor: theme.color.accent.energy,
+    backgroundColor: theme.color.bg.elevated,
+    borderWidth: theme.borderWidth.hairline,
+    borderColor: theme.color.stroke.subtle,
+    alignItems: "center",
+    justifyContent: "center",
   },
   sequenceLabel: {
     ...theme.typography.caption,
