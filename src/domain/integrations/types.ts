@@ -1,4 +1,9 @@
-export type IntegrationProvider = "apple-health" | "strava" | "manual" | "mock";
+export type ManagedIntegrationProvider = "apple-health" | "strava" | "whoop";
+
+export type IntegrationProvider =
+  | ManagedIntegrationProvider
+  | "manual"
+  | "mock";
 
 export type ConnectionState =
   | "unavailable"
@@ -13,9 +18,13 @@ export type ConnectionState =
 
 export type MetricKey =
   | "workouts"
+  | "distance"
+  | "duration"
   | "steps"
   | "sleep-duration"
   | "active-energy"
+  | "recovery-score"
+  | "strain-score"
   | "resting-heart-rate"
   | "mindfulness-minutes";
 
@@ -60,6 +69,9 @@ export interface ProviderSnapshot {
   id?: string;
   provider: IntegrationProvider;
   capturedAt: string;
+  window?: MetricWindow;
+  sourceReference?: string;
+  metadata?: Record<string, unknown>;
   metrics: MetricValue[];
   coverage: MetricCoverage[];
 }

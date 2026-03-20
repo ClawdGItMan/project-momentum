@@ -39,7 +39,8 @@
 ### Post / Check-In Composer
 
 - choose post type
-- attach metrics or manual progress
+- choose source: auto, Apple Health, Strava, WHOOP, or manual fallback
+- attach synced metrics or manual progress
 - choose visibility: only me, friends, or squad
 - add caption or reflection
 - publish preview
@@ -59,6 +60,16 @@
 - visible momentum stats
 - badge or milestone area
 - selected audience and privacy cues
+- account settings entry point
+
+### Account / Settings
+
+- Apple Health, Strava, and WHOOP connection cards
+- latest saved summary and latest sync state per provider
+- coverage summary, retry path, and disconnect for remote providers
+- sign out
+- delete account flow with typed confirmation
+- owned-squad transfer controls before deletion
 
 ### Squads
 
@@ -71,7 +82,6 @@
 - generated friend and squad invite tokens as fallback handoff
 - invite token acceptance
 - friends list as supporting private-graph setup
-- provider connection and refresh controls as supporting recovery tools
 
 ### Squad Chat
 
@@ -90,6 +100,7 @@
 - integration detail screen
 - privacy and audience selector sheet
 - squad chat screen
+- account settings screen
 
 ## Screen Priority
 
@@ -100,5 +111,6 @@ Build priority should be:
 3. post flow
 4. feed
 5. squads plus squad chat
-6. habits
-7. profile
+6. account and Apple Health management
+7. habits
+8. profile

@@ -1,7 +1,13 @@
 import type { Session } from "@supabase/supabase-js";
 
 import { calculateConsistency } from "@/src/domain/consistency";
-import type { ConnectionRecord, ConsistencyResult, ProviderSnapshot } from "@/src/domain/models";
+import type {
+  ConnectionRecord,
+  ConsistencyResult,
+  IntegrationProvider,
+  ManagedIntegrationProvider,
+  ProviderSnapshot,
+} from "@/src/domain/models";
 import type {
   AccountabilityStyle,
   AudienceVisibility,
@@ -11,8 +17,10 @@ import type {
   Habit,
   ProgressPost,
   Squad,
+  SquadMemberSummary,
   UserProfile,
 } from "@/src/features/app/sessionTypes";
+import { getBackendUrl } from "@/src/lib/backend/config";
 import { supabase } from "@/src/lib/supabase/client";
 
 type ProfileOverviewRow = {
@@ -30,6 +38,10 @@ type ProfileOverviewRow = {
   consistency_label: ConsistencyResult["label"] | null;
 };
 
+type AuthAccountRow = {
+  onboarding_completed: boolean | null;
+};
+
 type FeedItemRow = {
   id: string;
   author_id: string;
@@ -40,6 +52,7 @@ type FeedItemRow = {
   type: ProgressPost["type"];
   audience: AudienceVisibility;
   caption: string;
+  source_provider?: string | null;
   consistency_score: number | null;
   consistency_label: ProgressPost["consistencyLabel"] | null;
   created_at: string;
@@ -49,6 +62,8 @@ type FeedItemRow = {
         label: string;
         value: string | number | boolean | null;
         unit?: string | null;
+        provider?: string | null;
+        source?: string | null;
       }>
     | null;
   did_this_too_count: number | null;
@@ -105,6 +120,11 @@ type ProviderSnapshotRow = {
   id: string;
   provider: ProviderSnapshot["provider"];
   captured_at: string;
+  window_start_at?: string | null;
+  window_end_at?: string | null;
+  window_bucket?: ProviderSnapshot["metrics"][number]["window"]["bucket"] | null;
+  source_reference?: string | null;
+  metadata?: Record<string, unknown> | null;
   metrics: ProviderSnapshotMetricRow[] | null;
   coverage: ProviderSnapshotCoverageRow[] | null;
 };
@@ -128,14 +148,44 @@ type SquadMessageRow = {
   author_username: string;
 };
 
+type SquadMemberOverviewRow = {
+  id: string;
+  squad_id: string;
+  user_id: string;
+  role: string;
+  state: string;
+  joined_at: string;
+  left_at: string | null;
+  display_name: string | null;
+  username: string;
+  mission_line: string | null;
+  is_current_user: boolean;
+};
+
+type BackendResponseEnvelope<T> = {
+  data: T;
+  meta?: {
+    requestId?: string;
+  };
+};
+
+type BackendErrorEnvelope = {
+  error?: {
+    code?: string;
+    message?: string;
+    requestId?: string;
+    details?: unknown;
+  };
+};
+
 type AppBootstrapData = {
   currentUser: UserProfile | null;
   friends: Friend[];
   squads: Squad[];
   habits: Habit[];
   feedPosts: ProgressPost[];
-  healthConnection: ConnectionRecord | null;
-  healthSnapshot: ProviderSnapshot | null;
+  providerConnections: ConnectionRecord[];
+  providerSnapshots: ProviderSnapshot[];
   consistency: ConsistencyResult;
   chatOverviews: SquadChatOverview[];
 };
@@ -188,6 +238,13 @@ export type SquadMessageItem = {
   pending?: boolean;
   failed?: boolean;
   clientMessageId?: string;
+};
+
+export type DeleteAccountBlockingSquad = {
+  id: string;
+  name: string;
+  handle: string;
+  otherActiveMemberCount: number;
 };
 
 function buildDefaultConsistency(selectedPillars: FocusPillar[]): ConsistencyResult {
@@ -270,6 +327,23 @@ function mapSquad(row: SquadOverviewRow): Squad {
 }
 
 function mapPost(row: FeedItemRow, currentUserId?: string): ProgressPost {
+  const mappedMetrics = (row.metrics ?? []).map((metric) => ({
+    key: metric.key as ProgressPost["metrics"][number]["key"],
+    label: metric.label,
+    value: toPostMetricValue(parseMetricValue(metric.value ?? "")),
+    unit: metric.unit ?? undefined,
+    provider: (metric.provider as IntegrationProvider | undefined) ?? undefined,
+    source: (metric.source as ProgressPost["metrics"][number]["source"]) ?? undefined,
+  }));
+  const sourceProviders = Array.from(
+    new Set(
+      [
+        row.source_provider as IntegrationProvider | undefined,
+        ...mappedMetrics.map((metric) => metric.provider),
+      ].filter((provider): provider is IntegrationProvider => Boolean(provider)),
+    ),
+  );
+
   return {
     id: row.id,
     authorId: row.author_id,
@@ -281,12 +355,9 @@ function mapPost(row: FeedItemRow, currentUserId?: string): ProgressPost {
     audience: row.audience,
     caption: row.caption,
     createdAt: row.created_at,
-    metrics: (row.metrics ?? []).map((metric) => ({
-      key: metric.key as ProgressPost["metrics"][number]["key"],
-      label: metric.label,
-      value: toPostMetricValue(parseMetricValue(metric.value ?? "")),
-      unit: metric.unit ?? undefined,
-    })),
+    metrics: mappedMetrics,
+    sourceProvider: (row.source_provider as IntegrationProvider | undefined) ?? sourceProviders[0],
+    sourceProviders,
     consistencyScore: row.consistency_score ?? 0,
     consistencyLabel: row.consistency_label ?? "Starting",
     reactions: {
@@ -315,10 +386,19 @@ function mapConnection(row?: ProviderConnectionRow | null): ConnectionRecord | n
 function mapSnapshot(row?: ProviderSnapshotRow | null): ProviderSnapshot | null {
   if (!row) return null;
 
+  const window = {
+    startAt: row.window_start_at ?? row.captured_at,
+    endAt: row.window_end_at ?? row.captured_at,
+    bucket: row.window_bucket ?? "today",
+  } as const;
+
   return {
     id: row.id,
     provider: row.provider,
     capturedAt: row.captured_at,
+    window,
+    sourceReference: row.source_reference ?? undefined,
+    metadata: row.metadata ?? undefined,
     metrics: (row.metrics ?? []).map((metric) => ({
       key: metric.key as ProviderSnapshot["metrics"][number]["key"],
       value: parseMetricValue(metric.value),
@@ -326,11 +406,7 @@ function mapSnapshot(row?: ProviderSnapshotRow | null): ProviderSnapshot | null 
       source: (metric.source as ProviderSnapshot["metrics"][number]["source"]) ?? "derived",
       provider: row.provider,
       observedAt: metric.observedAt ?? row.captured_at,
-      window: {
-        startAt: row.captured_at,
-        endAt: row.captured_at,
-        bucket: "today",
-      },
+      window,
       confidence: metric.confidence ?? "high",
     })),
     coverage: (row.coverage ?? []).map((item) => ({
@@ -355,6 +431,22 @@ function mapSquadMessage(row: SquadMessageRow): SquadMessageItem {
   };
 }
 
+function mapSquadMember(row: SquadMemberOverviewRow): SquadMemberSummary {
+  return {
+    id: row.id,
+    squadId: row.squad_id,
+    userId: row.user_id,
+    role: row.role,
+    state: row.state,
+    joinedAt: row.joined_at,
+    leftAt: row.left_at ?? undefined,
+    displayName: row.display_name ?? row.username,
+    username: row.username,
+    missionLine: row.mission_line ?? undefined,
+    isCurrentUser: row.is_current_user,
+  };
+}
+
 async function requireAuthenticatedUserId() {
   const {
     data: { user },
@@ -367,6 +459,50 @@ async function requireAuthenticatedUserId() {
   }
 
   return user.id;
+}
+
+async function requireAccessToken() {
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+
+  if (error) throw error;
+  if (!session?.access_token) {
+    throw new Error("Authentication required.");
+  }
+
+  return session.access_token;
+}
+
+async function parseBackendJson<T>(response: Response): Promise<T> {
+  const json = (await response.json().catch(() => null)) as
+    | BackendResponseEnvelope<T>
+    | BackendErrorEnvelope
+    | null;
+
+  if (response.ok) {
+    const payload = json as BackendResponseEnvelope<T> | null;
+    if (!payload?.data) {
+      throw new Error("Backend returned an empty response.");
+    }
+    return payload.data;
+  }
+
+  const backendError = (json as BackendErrorEnvelope | null)?.error;
+  const error = new Error(
+    backendError?.message ?? `Backend request failed with status ${response.status}.`,
+  ) as Error & {
+    status?: number;
+    code?: string;
+    details?: unknown;
+    requestId?: string;
+  };
+  error.status = response.status;
+  error.code = backendError?.code;
+  error.details = backendError?.details;
+  error.requestId = backendError?.requestId;
+  throw error;
 }
 
 export async function signIn(email: string, password: string) {
@@ -426,6 +562,7 @@ export async function bootstrapOnboarding(payload: {
 
 export async function fetchAppBootstrapData(userId: string): Promise<AppBootstrapData> {
   const [
+    accountResult,
     profileResult,
     membershipsResult,
     habitsResult,
@@ -435,6 +572,11 @@ export async function fetchAppBootstrapData(userId: string): Promise<AppBootstra
     chatResult,
     friendshipsResult,
   ] = await Promise.all([
+    supabase
+      .from("auth_accounts")
+      .select("onboarding_completed")
+      .eq("user_id", userId)
+      .maybeSingle<AuthAccountRow>(),
     supabase
       .from("profile_overviews")
       .select("*")
@@ -455,17 +597,13 @@ export async function fetchAppBootstrapData(userId: string): Promise<AppBootstra
     supabase
       .from("provider_connections_public")
       .select("*")
-      .eq("user_id", userId)
-      .eq("provider", "apple-health")
-      .maybeSingle<ProviderConnectionRow>(),
+      .eq("user_id", userId),
     supabase
       .from("provider_snapshots_public")
       .select("*")
       .eq("user_id", userId)
-      .eq("provider", "apple-health")
       .order("captured_at", { ascending: false })
-      .limit(1)
-      .maybeSingle<ProviderSnapshotRow>(),
+      .limit(20),
     supabase
       .from("squad_chat_overviews")
       .select("*")
@@ -474,6 +612,7 @@ export async function fetchAppBootstrapData(userId: string): Promise<AppBootstra
   ]);
 
   const fatalError =
+    accountResult.error ??
     profileResult.error ??
     membershipsResult.error ??
     habitsResult.error ??
@@ -509,7 +648,12 @@ export async function fetchAppBootstrapData(userId: string): Promise<AppBootstra
   }
 
   const profile = profileResult.data;
-  const currentUser = profile ? mapProfile(profile) : null;
+  const isOnboarded = Boolean(
+    accountResult.data?.onboarding_completed &&
+      profile?.username &&
+      profile.username.trim().length >= 3,
+  );
+  const currentUser = profile && isOnboarded ? mapProfile(profile) : null;
   const consistency = profile
     ? ({
         score: profile.consistency_score ?? 0,
@@ -537,8 +681,12 @@ export async function fetchAppBootstrapData(userId: string): Promise<AppBootstra
     squads: (squadsResult.data ?? []).map((row) => mapSquad(row as SquadOverviewRow)),
     habits: (habitsResult.data ?? []).map((row) => mapHabit(row as HabitOverviewRow)),
     feedPosts: (feedResult.data ?? []).map((row) => mapPost(row as FeedItemRow, userId)),
-    healthConnection: mapConnection(connectionResult.data ?? null),
-    healthSnapshot: mapSnapshot(snapshotResult.data ?? null),
+    providerConnections: (connectionResult.data ?? []).map((row) =>
+      mapConnection(row as ProviderConnectionRow),
+    ).filter((row): row is ConnectionRecord => Boolean(row)),
+    providerSnapshots: (snapshotResult.data ?? []).map((row) =>
+      mapSnapshot(row as ProviderSnapshotRow),
+    ).filter((row): row is ProviderSnapshot => Boolean(row)),
     consistency,
     chatOverviews: (chatResult.data ?? []).map((row) => ({
       squadId: (row as SquadChatOverviewRow).squad_id,
@@ -766,6 +914,65 @@ export async function recordAppleHealthSnapshot(payload: {
   return mapSnapshot((Array.isArray(data) ? data[0] : data) as ProviderSnapshotRow);
 }
 
+export async function startProviderOAuth(
+  provider: Exclude<ManagedIntegrationProvider, "apple-health">,
+) {
+  const accessToken = await requireAccessToken();
+  const backendUrl = getBackendUrl();
+  const response = await fetch(`${backendUrl}/integrations/${provider}/connect`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  return parseBackendJson<{
+    provider: string;
+    authorizationUrl: string;
+    redirectUri: string;
+  }>(response);
+}
+
+export async function syncRemoteProvider(
+  provider: Exclude<ManagedIntegrationProvider, "apple-health">,
+) {
+  const accessToken = await requireAccessToken();
+  const backendUrl = getBackendUrl();
+  const response = await fetch(`${backendUrl}/integrations/${provider}/sync`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  return parseBackendJson<{
+    provider: string;
+    state: ConnectionRecord["state"];
+    itemCount: number;
+    latestSnapshotId?: string | null;
+    lastSyncAt?: string | null;
+  }>(response);
+}
+
+export async function disconnectRemoteProvider(
+  provider: Exclude<ManagedIntegrationProvider, "apple-health">,
+) {
+  const accessToken = await requireAccessToken();
+  const backendUrl = getBackendUrl();
+  const response = await fetch(`${backendUrl}/integrations/${provider}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  return parseBackendJson<{
+    disconnected: boolean;
+    provider: string;
+  }>(response);
+}
+
 export async function createCheckIn(payload: {
   type: CheckInDraft["type"];
   audience: AudienceVisibility;
@@ -804,6 +1011,21 @@ export async function fetchSquadMessages(squadId: string): Promise<SquadMessageI
   return (data ?? []).map((row) => mapSquadMessage(row as SquadMessageRow));
 }
 
+export async function fetchSquadMembers(
+  squadId: string,
+): Promise<SquadMemberSummary[]> {
+  const { data, error } = await supabase
+    .from("squad_member_overviews")
+    .select("*")
+    .eq("squad_id", squadId)
+    .eq("state", "active")
+    .order("joined_at", { ascending: true });
+
+  if (error) throw error;
+
+  return (data ?? []).map((row) => mapSquadMember(row as SquadMemberOverviewRow));
+}
+
 async function fetchSquadMessageById(messageId: string) {
   const { data, error } = await supabase
     .from("squad_message_items")
@@ -839,6 +1061,95 @@ export async function markSquadChatRead(squadId: string) {
   });
 
   if (error) throw error;
+}
+
+export async function transferSquadOwnership(
+  squadId: string,
+  newOwnerId: string,
+) {
+  const { error } = await supabase.rpc("transfer_squad_ownership", {
+    p_squad_id: squadId,
+    p_new_owner_id: newOwnerId,
+  });
+
+  if (error) throw error;
+}
+
+export async function deleteAccount(): Promise<{ deleted: boolean }> {
+  const accessToken = await requireAccessToken();
+  const backendUrl = getBackendUrl();
+  const deleteUrl = `${backendUrl}/me`;
+  let response: Response;
+
+  try {
+    response = await fetch(deleteUrl, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  } catch (error) {
+    const host = (() => {
+      try {
+        return new URL(backendUrl).hostname;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (host === "localhost" || host === "127.0.0.1") {
+      throw new Error(
+        "Delete account needs a reachable backend. On a physical iPhone, set EXPO_PUBLIC_BACKEND_URL to your Mac's LAN IP, for example http://172.18.234.54:8787, and keep `npm run backend:dev` running.",
+      );
+    }
+
+    throw new Error(
+      error instanceof Error && error.message.trim().length
+        ? `${error.message} (Delete account could not reach ${deleteUrl}.)`
+        : `Delete account could not reach ${deleteUrl}.`,
+    );
+  }
+
+  try {
+    return await parseBackendJson<{ deleted: boolean }>(response);
+  } catch (error) {
+    const backendError = error as Error & {
+      status?: number;
+      code?: string;
+      details?: unknown;
+    };
+
+    if (
+      backendError.status === 409 &&
+      backendError.code === "account_delete_blocked" &&
+      backendError.details &&
+      typeof backendError.details === "object" &&
+      "blockingSquads" in backendError.details
+    ) {
+      const blockingSquads = (
+        backendError.details as { blockingSquads?: DeleteAccountBlockingSquad[] }
+      ).blockingSquads;
+
+      if (Array.isArray(blockingSquads) && blockingSquads.length > 0) {
+        const summary = blockingSquads
+          .map(
+            (squad) =>
+              `${squad.name} (@${squad.handle}) still has ${squad.otherActiveMemberCount} other active member${squad.otherActiveMemberCount === 1 ? "" : "s"}`,
+          )
+          .join("; ");
+
+        throw new Error(
+          `Transfer squad ownership before deleting this account. ${summary}.`,
+        );
+      }
+    }
+
+    if (backendError.status === 401) {
+      throw new Error("Your session expired. Sign in again and retry account deletion.");
+    }
+
+    throw error;
+  }
 }
 
 export function subscribeToSquadMessages(

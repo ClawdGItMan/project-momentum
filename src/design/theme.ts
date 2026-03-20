@@ -6,32 +6,36 @@ const { color, spacing, radius, borderWidth, shadow, opacity } = rawTokens;
 export const theme = {
   color: {
     bg: {
-      canvas: color.zinc50,
+      canvas: color.mineral50,
       surface: color.white,
-      elevated: "#F3F8FD",
-      inverse: color.slate950,
+      elevated: color.mineral100,
+      inverse: color.graphite950,
     },
     fg: {
-      primary: color.slate900,
-      secondary: color.slate600,
-      muted: color.slate500,
+      primary: color.graphite950,
+      secondary: color.graphite700,
+      muted: color.graphite500,
       inverse: color.white,
     },
     accent: {
-      energy: color.sky600,
-      consistency: color.cyan500,
-      success: color.emerald500,
-      warning: color.amber500,
-      danger: color.rose500,
+      energy: color.cobalt700,
+      energySoft: color.cobalt600,
+      consistency: color.steelTeal600,
+      support: color.steelTeal600,
+      success: color.success600,
+      warning: color.warning600,
+      danger: color.danger600,
+      champagne: color.champagne200,
     },
     stroke: {
-      subtle: color.slate200,
-      strong: color.slate300,
-      inverse: color.slate700,
+      subtle: color.mineral200,
+      strong: color.mineral300,
+      inverse: color.graphite700,
+      focus: color.cobalt700,
     },
     chip: {
-      bg: "#EAF6FD",
-      fg: color.sky600,
+      bg: "#E7EEFF",
+      fg: color.cobalt700,
     },
   },
   spacing,
@@ -43,4 +47,3 @@ export const theme = {
 } as const;
 
 export type Theme = typeof theme;
-

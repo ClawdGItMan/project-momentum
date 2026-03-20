@@ -1,4 +1,10 @@
-import type { ConnectionState, CoverageReason, MetricKey } from "@/src/domain/models";
+import type {
+  ConnectionState,
+  CoverageReason,
+  IntegrationProvider,
+  MetricKey,
+} from "@/src/domain/models";
+import { formatProviderLabel as formatProviderName } from "@/src/lib/providers";
 
 export const formatTimestamp = (iso: string): string =>
   new Intl.DateTimeFormat("en-US", {
@@ -16,10 +22,18 @@ export const formatMetricLabel = (key: MetricKey | string): string => {
       return "Workouts";
     case "steps":
       return "Steps";
+    case "distance":
+      return "Distance";
+    case "duration":
+      return "Duration";
     case "sleep-duration":
       return "Sleep";
     case "active-energy":
       return "Active energy";
+    case "recovery-score":
+      return "Recovery";
+    case "strain-score":
+      return "Strain";
     case "resting-heart-rate":
       return "Resting heart";
     case "mindfulness-minutes":
@@ -37,6 +51,10 @@ export const formatConnectionState = (state: ConnectionState): string =>
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+
+export const formatProviderLabel = (
+  provider: IntegrationProvider | "auto" | "manual",
+) => formatProviderName(provider);
 
 export const formatCoverageReason = (reason?: CoverageReason): string => {
   switch (reason) {

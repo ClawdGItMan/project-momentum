@@ -10,13 +10,28 @@ import { seededAppleHealthMetrics } from "@/src/data/fixtures/metrics";
 import { AppleHealthAdapter, type AppleHealthBridge } from "@/src/data/adapters/appleHealth";
 import { ManualEntryAdapter } from "@/src/data/adapters/manualEntry";
 import { StravaAdapter } from "@/src/data/adapters/strava";
+import { WhoopAdapter } from "@/src/data/adapters/whoop";
 
 export const getDemoMetricWindow = (): MetricWindow =>
   createWindow(
-  new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-  new Date().toISOString(),
-  "today",
+    (() => {
+      const now = new Date();
+      const start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+      return start.toISOString();
+    })(),
+    new Date().toISOString(),
+    "today",
   );
+
+const getSleepLookbackWindow = (): MetricWindow => {
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const lookbackStart = new Date(startOfToday.getTime() - 12 * 60 * 60 * 1000);
+
+  return createWindow(lookbackStart.toISOString(), now.toISOString(), "today");
+};
 
 type HealthModule = {
   Constants: {
@@ -27,29 +42,44 @@ type HealthModule = {
     permissions: { permissions: { read: string[]; write: string[] } },
     callback: (error: string | null, result?: unknown) => void,
   ) => void;
-  getDailyStepCountSamples: (
-    options: { startDate: string; endDate?: string },
-    callback: (error: string | null, results: Array<{ value: number }>) => void,
+  getStepCount: (
+    options: { date?: string; includeManuallyAdded?: boolean },
+    callback: (
+      error: string | object | null,
+      results: { value?: number; startDate?: string; endDate?: string },
+    ) => void,
   ) => void;
   getSleepSamples: (
-    options: { startDate: string; endDate?: string },
+    options: { startDate: string; endDate?: string; limit?: number; ascending?: boolean },
     callback: (
-      error: string | null,
+      error: string | object | null,
       results: Array<{ startDate: string; endDate: string; value: string }>,
     ) => void,
   ) => void;
   getActiveEnergyBurned: (
-    options: { startDate: string; endDate?: string },
+    options: {
+      startDate: string;
+      endDate?: string;
+      period?: number;
+      ascending?: boolean;
+      includeManuallyAdded?: boolean;
+    },
     callback: (
-      error: string | null,
+      error: string | object | null,
       results: Array<{ value: number }> | { value?: number },
     ) => void,
   ) => void;
   getSamples: (
-    options: { startDate: string; endDate?: string; type: string },
+    options: {
+      startDate: string;
+      endDate?: string;
+      type: string;
+      limit?: number;
+      ascending?: boolean;
+    },
     callback: (
-      error: string | null,
-      results: Array<{ calories?: number; start?: string; end?: string }>,
+      error: string | object | null,
+      results: Array<{ calories?: number; start?: string; end?: string; startDate?: string; endDate?: string }>,
     ) => void,
   ) => void;
 };
@@ -119,7 +149,7 @@ const hasRequiredHealthModuleMethods = (
     candidate &&
       typeof candidate.isAvailable === "function" &&
       typeof candidate.initHealthKit === "function" &&
-      typeof candidate.getDailyStepCountSamples === "function" &&
+      typeof candidate.getStepCount === "function" &&
       typeof candidate.getSleepSamples === "function" &&
       typeof candidate.getActiveEnergyBurned === "function" &&
       typeof candidate.getSamples === "function",
@@ -211,11 +241,32 @@ const authorizeHealthKit = async (
   });
 
 const callArrayQuery = async <T>(
-  run: (callback: (error: string | null, results: T[]) => void) => void,
+  run: (callback: (error: string | object | null, results: T[]) => void) => void,
 ): Promise<T[]> =>
-  new Promise((resolve) => {
+  new Promise((resolve, reject) => {
     run((error, results) => {
-      resolve(error ? [] : Array.isArray(results) ? results : []);
+      const normalizedError = normalizeHealthError(error);
+      if (normalizedError) {
+        reject(new Error(normalizedError));
+        return;
+      }
+
+      resolve(Array.isArray(results) ? results : []);
+    });
+  });
+
+const callQuery = async <T>(
+  run: (callback: (error: string | object | null, results: T) => void) => void,
+): Promise<T> =>
+  new Promise((resolve, reject) => {
+    run((error, results) => {
+      const normalizedError = normalizeHealthError(error);
+      if (normalizedError) {
+        reject(new Error(normalizedError));
+        return;
+      }
+
+      resolve(results);
     });
   });
 
@@ -224,10 +275,24 @@ const callEnergyQuery = async (
   window: MetricWindow,
 ): Promise<number | null> => {
   const result = await new Promise<Array<{ value: number }> | { value?: number }>(
-    (resolve) => {
+    (resolve, reject) => {
       healthModule.getActiveEnergyBurned(
-        { startDate: window.startAt, endDate: window.endAt },
-        (_error, results) => resolve(results ?? []),
+        {
+          startDate: window.startAt,
+          endDate: window.endAt,
+          period: 1440,
+          ascending: true,
+          includeManuallyAdded: true,
+        },
+        (error, results) => {
+          const normalizedError = normalizeHealthError(error);
+          if (normalizedError) {
+            reject(new Error(normalizedError));
+            return;
+          }
+
+          resolve(results ?? []);
+        },
       );
     },
   );
@@ -241,8 +306,101 @@ const callEnergyQuery = async (
   return single > 0 ? single : null;
 };
 
-const hoursBetween = (startDate: string, endDate: string) =>
-  (new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60);
+type SleepSample = {
+  startDate: string;
+  endDate: string;
+  value: string;
+};
+
+type SleepInterval = {
+  start: number;
+  end: number;
+};
+
+const sleepStateAllowsDuration = new Set(["ASLEEP", "CORE", "DEEP", "REM"]);
+
+function mergeSleepIntervals(samples: SleepSample[]): SleepInterval[] {
+  const intervals = samples
+    .filter((sample) => sleepStateAllowsDuration.has(String(sample.value).toUpperCase()))
+    .map((sample) => ({
+      start: new Date(sample.startDate).getTime(),
+      end: new Date(sample.endDate).getTime(),
+    }))
+    .filter((interval) => Number.isFinite(interval.start) && Number.isFinite(interval.end))
+    .filter((interval) => interval.end > interval.start)
+    .sort((left, right) => left.start - right.start);
+
+  if (!intervals.length) {
+    return [];
+  }
+
+  return intervals.reduce<SleepInterval[]>((acc, interval) => {
+    const last = acc[acc.length - 1];
+    if (!last) {
+      acc.push(interval);
+      return acc;
+    }
+
+    if (interval.start <= last.end) {
+      last.end = Math.max(last.end, interval.end);
+      return acc;
+    }
+
+    acc.push(interval);
+    return acc;
+  }, []);
+}
+
+function buildSleepSessions(intervals: SleepInterval[]) {
+  const gapThresholdMs = 90 * 60 * 1000;
+
+  return intervals.reduce<Array<{ start: number; end: number; durationHours: number }>>(
+    (acc, interval) => {
+      const last = acc[acc.length - 1];
+      if (!last) {
+        acc.push({
+          start: interval.start,
+          end: interval.end,
+          durationHours: (interval.end - interval.start) / (1000 * 60 * 60),
+        });
+        return acc;
+      }
+
+      if (interval.start - last.end <= gapThresholdMs) {
+        last.end = Math.max(last.end, interval.end);
+        last.durationHours = (last.end - last.start) / (1000 * 60 * 60);
+        return acc;
+      }
+
+      acc.push({
+        start: interval.start,
+        end: interval.end,
+        durationHours: (interval.end - interval.start) / (1000 * 60 * 60),
+      });
+      return acc;
+    },
+    [],
+  );
+}
+
+function getLatestSleepDuration(samples: SleepSample[]) {
+  const sessions = buildSleepSessions(mergeSleepIntervals(samples));
+  if (!sessions.length) {
+    return null;
+  }
+
+  const likelyNightSleep =
+    [...sessions]
+      .filter((session) => session.durationHours >= 3)
+      .sort((left, right) => right.end - left.end)[0] ??
+    [...sessions].sort((left, right) => right.end - left.end)[0];
+
+  if (!likelyNightSleep) {
+    return null;
+  }
+
+  return Number(likelyNightSleep.durationHours.toFixed(1));
+}
 
 const createNativeBridge = (): AppleHealthBridge | undefined => {
   if (Platform.OS !== "ios") return undefined;
@@ -253,42 +411,68 @@ const createNativeBridge = (): AppleHealthBridge | undefined => {
     isAvailable: () => callAvailability(healthModule),
     authorize: () => authorizeHealthKit(healthModule),
     readMetrics: async (window) => {
-      const [steps, sleepSamples, workouts] = await Promise.all([
-        callArrayQuery<{ value: number }>((callback) =>
-          healthModule.getDailyStepCountSamples(
-            { startDate: window.startAt, endDate: window.endAt },
+      const sleepWindow = getSleepLookbackWindow();
+      const [stepCount, sleepSamples, workouts] = await Promise.all([
+        callQuery<{ value?: number }>((callback) =>
+          healthModule.getStepCount(
+            {
+              date: window.endAt,
+              includeManuallyAdded: true,
+            },
             callback,
           ),
         ),
-        callArrayQuery<{ startDate: string; endDate: string; value: string }>(
-          (callback) =>
-            healthModule.getSleepSamples(
-              { startDate: window.startAt, endDate: window.endAt },
-              callback,
-            ),
+        callArrayQuery<SleepSample>((callback) =>
+          healthModule.getSleepSamples(
+            {
+              startDate: sleepWindow.startAt,
+              endDate: sleepWindow.endAt,
+              ascending: true,
+            },
+            callback,
+          ),
         ),
-        callArrayQuery<{ calories?: number }>((callback) =>
+        callArrayQuery<{
+          calories?: number;
+          start?: string;
+          end?: string;
+          startDate?: string;
+          endDate?: string;
+        }>((callback) =>
           healthModule.getSamples(
-            { startDate: window.startAt, endDate: window.endAt, type: "Workout" },
+            {
+              startDate: window.startAt,
+              endDate: window.endAt,
+              type: "Workout",
+              ascending: false,
+              limit: 50,
+            },
             callback,
           ),
         ),
       ]);
 
       const activeEnergy = await callEnergyQuery(healthModule, window);
-      const stepTotal = steps.reduce((sum, item) => sum + Number(item.value || 0), 0);
-      const sleepHours = sleepSamples
-        .filter((sample) => String(sample.value).toUpperCase() !== "INBED")
-        .reduce(
-          (sum, sample) => sum + hoursBetween(sample.startDate, sample.endDate),
-          0,
-        );
+      const stepTotal = Number(stepCount.value ?? 0);
+      const sleepHours = getLatestSleepDuration(sleepSamples) ?? 0;
+      const workoutCount = workouts.filter((workout) => {
+        const workoutStart = new Date(workout.start ?? workout.startDate ?? 0).getTime();
+        const workoutEnd = new Date(workout.end ?? workout.endDate ?? 0).getTime();
+        const windowStart = new Date(window.startAt).getTime();
+        const windowEnd = new Date(window.endAt).getTime();
+
+        if (!Number.isFinite(workoutStart) || !Number.isFinite(workoutEnd)) {
+          return true;
+        }
+
+        return workoutEnd >= windowStart && workoutStart <= windowEnd;
+      }).length;
 
       return {
         workouts: {
-          value: workouts.length,
+          value: workoutCount,
           unit: "count",
-          available: workouts.length > 0,
+          available: workoutCount > 0,
         },
         steps: {
           value: stepTotal,
@@ -312,6 +496,7 @@ const createNativeBridge = (): AppleHealthBridge | undefined => {
 
 export const manualEntryAdapter = new ManualEntryAdapter();
 export const stravaAdapter = new StravaAdapter();
+export const whoopAdapter = new WhoopAdapter();
 
 export const createAppleHealthAdapter = (usePreview = false) =>
   new AppleHealthAdapter(usePreview ? createPreviewBridge() : createNativeBridge());
@@ -345,6 +530,10 @@ export const seedManualWorkoutFallback = async (options: {
   manualEntryAdapter.setMetric("active-energy", {
     value: options.activeEnergy,
     unit: "kcal",
+  });
+  manualEntryAdapter.setMetric("duration", {
+    value: options.durationMinutes,
+    unit: "min",
   });
   manualEntryAdapter.setMetric("steps", {
     value: 0,

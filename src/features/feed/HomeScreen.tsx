@@ -4,7 +4,8 @@ import { useRouter } from "expo-router";
 
 import { theme } from "@/src/design";
 import { useMomentumSession } from "@/src/features/app/MomentumSessionProvider";
-import { formatConnectionState } from "@/src/lib/formatters";
+import { formatConnectionState, formatProviderLabel } from "@/src/lib/formatters";
+import { managedProviders } from "@/src/lib/providers";
 import { ConsistencyCard } from "@/src/ui/composites/ConsistencyCard";
 import { ProgressPostCard } from "@/src/ui/composites/ProgressPostCard";
 import {
@@ -23,10 +24,10 @@ export function HomeScreen() {
     currentUser,
     dismissPublishedCelebration,
     feedPosts,
-    healthConnection,
     homeSegment,
     lastPublishedPostId,
     manualFallbackEnabled,
+    providerConnections,
     reactToPost,
     setHomeSegment,
     squads,
@@ -44,10 +45,15 @@ export function HomeScreen() {
         : false
       : post.audience === "friends",
   );
+  const connectedProviders = managedProviders.filter((provider) => {
+    const state = providerConnections[provider].state;
+    return state === "connected" || state === "connected_limited";
+  });
+  const defaultHealthState = providerConnections["apple-health"];
   const showHealthPrompt =
     manualFallbackEnabled ||
-    (healthConnection.state !== "connected" &&
-      healthConnection.state !== "connected_limited");
+    (defaultHealthState.state !== "connected" &&
+      defaultHealthState.state !== "connected_limited");
   const lastPublishedAudienceLabel =
     lastPublishedPost?.audience === "squad"
       ? lastPublishedPost.squadName ?? "your squad"
@@ -95,7 +101,11 @@ export function HomeScreen() {
               this lane.
             </Text>
             <Text style={styles.bannerCopy}>
-              {formatConnectionState(healthConnection.state)}
+              {connectedProviders.length
+                ? `Connected: ${connectedProviders
+                    .map((provider) => formatProviderLabel(provider))
+                    .join(", ")}`
+                : `Default: ${formatConnectionState(defaultHealthState.state)}`}
               {manualFallbackEnabled ? " • manual entry active" : ""}
             </Text>
           </View>
@@ -159,18 +169,18 @@ export function HomeScreen() {
 
         {showHealthPrompt ? (
           <Card
-            title="Health sync needs attention"
-            subtitle={`${formatConnectionState(healthConnection.state)}${manualFallbackEnabled ? " • manual entry active" : ""}`}
+            title="Provider sync needs attention"
+            subtitle={`${formatProviderLabel("apple-health")}: ${formatConnectionState(defaultHealthState.state)}${manualFallbackEnabled ? " • manual entry active" : ""}`}
           >
             <Text style={styles.bannerCopy}>
-              You can keep posting with manual entry for now, but syncing Apple
-              Health makes updates faster and richer.
+              You can keep posting with manual entry for now, but connected providers make
+              check-ins faster and richer.
             </Text>
             <Button
-              label="Manage health state"
+              label="Manage providers"
               fullWidth={false}
               variant="ghost"
-              onPress={() => router.push("/(app)/squads")}
+              onPress={() => router.push("/(app)/account")}
             />
           </Card>
         ) : null}

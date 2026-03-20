@@ -2,7 +2,19 @@ import type { Context } from "hono";
 
 import type { AppBindings } from "../types";
 
-type ApiStatus = 200 | 201 | 202 | 400 | 401 | 404 | 409 | 500 | 501;
+type ApiStatus =
+  | 200
+  | 201
+  | 202
+  | 400
+  | 401
+  | 404
+  | 409
+  | 422
+  | 429
+  | 500
+  | 501
+  | 503;
 
 export function errorResponse(
   c: Context<AppBindings>,

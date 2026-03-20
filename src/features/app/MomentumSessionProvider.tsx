@@ -8,12 +8,13 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { AppState } from "react-native";
+import { AppState, Linking } from "react-native";
 
 import { calculateConsistency } from "@/src/domain/consistency";
 import type {
   ConnectionRecord,
   ConsistencyResult,
+  ManagedIntegrationProvider,
   ProviderSnapshot,
 } from "@/src/domain/models";
 import {
@@ -26,8 +27,12 @@ import {
   habitsSeed,
   onboardingDraftSeed,
   postsSeed,
+  stravaPreviewConnection,
+  stravaPreviewSnapshot,
   squadsSeed,
   userSeed,
+  whoopPreviewConnection,
+  whoopPreviewSnapshot,
 } from "@/src/data/fixtures/appSeed";
 import {
   bootstrapOnboarding,
@@ -36,6 +41,8 @@ import {
   createCheckIn,
   createSquad as persistCreateSquad,
   createSquadInviteToken as persistCreateSquadInviteToken,
+  deleteAccount as deleteAccountRequest,
+  disconnectRemoteProvider,
   joinDayOnesSquad as persistJoinDayOnesSquad,
   fetchAppBootstrapData,
   fetchSquadMessages,
@@ -49,8 +56,11 @@ import {
   signIn,
   signOut,
   signUp,
+  startProviderOAuth,
+  syncRemoteProvider,
   subscribeToSquadMessages,
   toggleHabitCompletion,
+  transferSquadOwnership as persistTransferSquadOwnership,
   type SquadChatOverview,
   type SquadMessageItem,
 } from "@/src/data/repositories/appRepository";
@@ -60,17 +70,35 @@ import {
   seedManualWorkoutFallback,
 } from "@/src/data/repositories/healthRepository";
 import { supabase, ensureSupabaseSessionRefresh } from "@/src/lib/supabase/client";
+import { isHealthSnapshotFresh } from "@/src/lib/health";
+import {
+  createDefaultProviderConnections,
+  createDefaultProviderSnapshots,
+  defaultManagedProvider,
+  formatProviderLabel,
+  getMetricsForPostType,
+  getSnapshotFlags,
+  isManagedProvider,
+  normalizeProviderConnection,
+  pickProviderForCheckIn,
+  toProviderConnectionMap,
+  toProviderSnapshotMap,
+} from "@/src/lib/providers";
 import type {
   AccountabilityStyle,
   AudienceVisibility,
   AuthState,
+  BootstrapStatus,
   CheckInDraft,
+  CheckInSourcePreference,
   FocusPillar,
   Friend,
   Habit,
   HomeSegment,
   OnboardingDraft,
   ProgressPost,
+  ProviderConnectionMap,
+  ProviderSnapshotMap,
   Squad,
   SquadMessage,
   UserProfile,
@@ -80,6 +108,8 @@ type MomentumSessionValue = {
   sessionHydrated: boolean;
   authReady: boolean;
   authState: AuthState;
+  bootstrapStatus: BootstrapStatus;
+  bootstrapError: string | null;
   onboardingComplete: boolean;
   authEmail: string;
   onboardingDraft: OnboardingDraft;
@@ -89,6 +119,8 @@ type MomentumSessionValue = {
   habits: Habit[];
   feedPosts: ProgressPost[];
   homeSegment: HomeSegment;
+  providerConnections: ProviderConnectionMap;
+  providerSnapshots: ProviderSnapshotMap;
   healthConnection: ConnectionRecord;
   healthSnapshot: ProviderSnapshot | null;
   healthPreviewActive: boolean;
@@ -113,6 +145,11 @@ type MomentumSessionValue = {
     city: string;
   }) => void;
   setSelectedSquad: (squadId?: string) => Promise<void>;
+  connectProvider: (
+    provider: ManagedIntegrationProvider,
+    options?: { preview?: boolean },
+  ) => Promise<{ connection: ConnectionRecord; snapshot: ProviderSnapshot | null }>;
+  refreshProvider: (provider: ManagedIntegrationProvider) => Promise<void>;
   connectHealth: (
     options?: { preview?: boolean },
   ) => Promise<{ connection: ConnectionRecord; snapshot: ProviderSnapshot | null }>;
@@ -147,6 +184,12 @@ type MomentumSessionValue = {
     squadId: string,
     inviteeId?: string,
   ) => Promise<{ inviteToken: string }>;
+  disconnectProvider: (
+    provider: Exclude<ManagedIntegrationProvider, "apple-health">,
+  ) => Promise<void>;
+  deleteAccount: () => Promise<void>;
+  transferSquadOwnership: (squadId: string, newOwnerId: string) => Promise<void>;
+  handleIntegrationCallback: (provider: ManagedIntegrationProvider) => Promise<void>;
   acceptInvite: (input: {
     kind: "friend" | "squad";
     token: string;
@@ -160,12 +203,8 @@ type MomentumSessionValue = {
 
 type PersistedFrontendState = {
   homeSegment: HomeSegment;
-  onboardingDraft: OnboardingDraft;
-  checkInDraft: CheckInDraft;
-  manualFallbackEnabled: boolean;
-  healthPreviewActive: boolean;
   demoMode: boolean;
-  authEmail: string;
+  authUserId: string | null;
 };
 
 const defaultConnection: ConnectionRecord = {
@@ -191,16 +230,13 @@ const emptyUser: UserProfile = {
 
 const defaultFrontendState: PersistedFrontendState = {
   homeSegment: "squads",
-  onboardingDraft: onboardingDraftSeed,
-  checkInDraft: checkInDraftSeed,
-  manualFallbackEnabled: false,
-  healthPreviewActive: false,
   demoMode: false,
-  authEmail: "",
+  authUserId: null,
 };
 
 const MomentumSessionContext = createContext<MomentumSessionValue | null>(null);
-const sessionStorageKey = "@project-momentum/frontend-v2";
+const sessionStorageKey = "@project-momentum/frontend-v3";
+const legacySessionStorageKeys = ["@project-momentum/frontend-v2"];
 
 const habitPool = [
   "Protein with breakfast",
@@ -274,12 +310,24 @@ function sameChatMessage(left: SquadMessage, right: SquadMessage) {
 }
 
 function normalizePersistedConnection(connection?: ConnectionRecord | null): ConnectionRecord {
-  if (!connection) return defaultConnection;
-  return {
-    ...defaultConnection,
-    ...connection,
-    coverage: connection.coverage?.length ? connection.coverage : defaultConnection.coverage,
-  };
+  return normalizeProviderConnection(defaultManagedProvider, connection);
+}
+
+function hasFreshSyncedHealthSnapshot(
+  connection: ConnectionRecord,
+  snapshot: ProviderSnapshot | null,
+  options?: { preview?: boolean },
+) {
+  if (options?.preview) {
+    return Boolean(snapshot?.metrics.length);
+  }
+
+  return Boolean(
+    snapshot?.metrics.length &&
+      isHealthSnapshotFresh(snapshot) &&
+      (!connection.lastError || !snapshot?.id) &&
+      (connection.state === "connected" || connection.state === "connected_limited"),
+  );
 }
 
 function buildConsistency(
@@ -342,16 +390,48 @@ function mapSquadMessages(items: SquadMessageItem[]): SquadMessage[] {
   }));
 }
 
+function parseIntegrationCallbackUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    const providerFromHost =
+      parsed.hostname === "integrations"
+        ? parsed.pathname.split("/").filter(Boolean)[0]
+        : null;
+    const providerFromUrl =
+      providerFromHost ??
+      url.match(/integrations\/([^/?#]+)\/callback/u)?.[1] ??
+      null;
+
+    if (!providerFromUrl || !isManagedProvider(providerFromUrl)) {
+      return null;
+    }
+
+    return {
+      provider: providerFromUrl,
+      status: parsed.searchParams.get("status") ?? undefined,
+      reason:
+        parsed.searchParams.get("message") ??
+        parsed.searchParams.get("reason") ??
+        undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function MomentumSessionProvider({
   children,
 }: React.PropsWithChildren) {
   const [sessionHydrated, setSessionHydrated] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [authState, setAuthState] = useState<AuthState>("signed-out");
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [authSession, setAuthSession] = useState<Session | null>(null);
   const [authEmail, setAuthEmail] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [bootstrapStatus, setBootstrapStatus] = useState<BootstrapStatus>("idle");
+  const [bootstrapError, setBootstrapError] = useState<string | null>(null);
   const [demoMode, setDemoMode] = useState(false);
 
   const [onboardingDraft, setOnboardingDraft] =
@@ -363,9 +443,10 @@ export function MomentumSessionProvider({
   const [habits, setHabits] = useState<Habit[]>([]);
   const [feedPosts, setFeedPosts] = useState<ProgressPost[]>([]);
   const [homeSegment, setHomeSegment] = useState<HomeSegment>("squads");
-  const [healthConnection, setHealthConnection] =
-    useState<ConnectionRecord>(defaultConnection);
-  const [healthSnapshot, setHealthSnapshot] = useState<ProviderSnapshot | null>(null);
+  const [providerConnections, setProviderConnections] =
+    useState<ProviderConnectionMap>(createDefaultProviderConnections());
+  const [providerSnapshots, setProviderSnapshots] =
+    useState<ProviderSnapshotMap>(createDefaultProviderSnapshots());
   const [healthPreviewActive, setHealthPreviewActive] = useState(false);
   const [manualFallbackEnabled, setManualFallbackEnabled] = useState(false);
   const [healthLoading, setHealthLoading] = useState(false);
@@ -379,19 +460,42 @@ export function MomentumSessionProvider({
 
   const chatSubscriptions = useRef<Record<string, { unsubscribe: () => void }>>({});
   const activeSquadChatRef = useRef<string | null>(null);
+  const authUserIdRef = useRef<string | null>(null);
+  const handledIntegrationUrlsRef = useRef<Set<string>>(new Set());
+
+  const healthConnection =
+    providerConnections[defaultManagedProvider] ?? defaultConnection;
+  const healthSnapshot = providerSnapshots[defaultManagedProvider] ?? null;
+
+  const setManagedProviderConnection = (
+    provider: ManagedIntegrationProvider,
+    connection: ConnectionRecord,
+  ) => {
+    setProviderConnections((current) => ({
+      ...current,
+      [provider]: normalizeProviderConnection(provider, connection),
+    }));
+  };
+
+  const setManagedProviderSnapshot = (
+    provider: ManagedIntegrationProvider,
+    snapshot: ProviderSnapshot | null,
+  ) => {
+    setProviderSnapshots((current) => ({
+      ...current,
+      [provider]: snapshot,
+    }));
+  };
 
   const persistFrontendState = async (
     overrides?: Partial<PersistedFrontendState>,
   ) => {
     const payload: PersistedFrontendState = {
-      homeSegment,
-      onboardingDraft,
-      checkInDraft,
-      manualFallbackEnabled,
-      healthPreviewActive,
-      demoMode,
-      authEmail,
+      ...defaultFrontendState,
       ...overrides,
+      demoMode: overrides?.demoMode ?? demoMode,
+      homeSegment: overrides?.homeSegment ?? homeSegment,
+      authUserId: overrides?.authUserId ?? authUserId,
     };
 
     await AsyncStorage.setItem(sessionStorageKey, JSON.stringify(payload)).catch(() => null);
@@ -404,57 +508,184 @@ export function MomentumSessionProvider({
     chatSubscriptions.current = {};
   };
 
-  const applyBackendData = async () => {
+  const resetUserScopedState = () => {
+    disconnectChatSubscriptions();
+    setOnboardingComplete(false);
+    setOnboardingDraft(onboardingDraftSeed);
+    setCurrentUser(emptyUser);
+    setFriends([]);
+    setSquads([]);
+    setHabits([]);
+    setFeedPosts([]);
+    setProviderConnections(createDefaultProviderConnections());
+    setProviderSnapshots(createDefaultProviderSnapshots());
+    setHealthPreviewActive(false);
+    setManualFallbackEnabled(false);
+    setHealthLoading(false);
+    setCheckInDraft(checkInDraftSeed);
+    setConsistency(buildConsistency(undefined, undefined, []));
+    setLastPublishedPostId(null);
+    setChatOverviews([]);
+    setSquadMessages({});
+    setActiveSquadChatId(null);
+    setChatLoading(false);
+  };
+
+  const applyBackendData = async (
+    options: { mode?: "bootstrap" | "refresh" } = {},
+  ) => {
     if (!authSession?.user.id) {
-      disconnectChatSubscriptions();
-      setOnboardingComplete(false);
-      setCurrentUser(emptyUser);
-      setFriends([]);
-      setSquads([]);
-      setHabits([]);
-      setFeedPosts([]);
-      setHealthConnection(defaultConnection);
-      setHealthSnapshot(null);
-      setConsistency(buildConsistency(undefined, undefined, []));
-      setChatOverviews([]);
-      setSquadMessages({});
-      setActiveSquadChatId(null);
+      resetUserScopedState();
+      setBootstrapStatus("idle");
+      setBootstrapError(null);
       return;
     }
 
-    const data = await fetchAppBootstrapData(authSession.user.id);
-    const isOnboarded = Boolean(data.currentUser);
-
-    setOnboardingComplete(isOnboarded);
-    setCurrentUser(data.currentUser ?? emptyUser);
-    setFriends(data.friends);
-    setSquads(data.squads);
-    setHabits(data.habits);
-    setFeedPosts(data.feedPosts);
-    setHealthConnection(normalizePersistedConnection(data.healthConnection));
-    setHealthSnapshot(data.healthSnapshot);
-    setConsistency(
-      data.currentUser
-        ? buildConsistency(data.consistency.score, data.consistency.label, data.currentUser.pillars)
-        : buildConsistency(undefined, undefined, onboardingDraft.pillars),
-    );
-    setChatOverviews(data.chatOverviews);
-
-    if (data.currentUser) {
-      const liveUser = data.currentUser;
-      setOnboardingDraft((current) => ({
-        ...current,
-        name: liveUser.name,
-        username: liveUser.username,
-        missionLine: liveUser.missionLine,
-        city: liveUser.city ?? "",
-        pillars: liveUser.pillars,
-        goals: liveUser.goals,
-        accountabilityStyle: liveUser.accountabilityStyle,
-        defaultAudience: liveUser.defaultAudience ?? current.defaultAudience,
-        selectedSquadId: liveUser.selectedSquadId,
-      }));
+    const mode = options.mode ?? "bootstrap";
+    if (mode === "bootstrap") {
+      setBootstrapStatus("loading");
+      setBootstrapError(null);
     }
+
+    try {
+      const data = await fetchAppBootstrapData(authSession.user.id);
+      const isOnboarded = Boolean(data.currentUser);
+
+      setOnboardingComplete(isOnboarded);
+      setCurrentUser(data.currentUser ?? emptyUser);
+      setFriends(data.friends);
+      setSquads(data.squads);
+      setHabits(data.habits);
+      setFeedPosts(data.feedPosts);
+      setProviderConnections(toProviderConnectionMap(data.providerConnections));
+      setProviderSnapshots(toProviderSnapshotMap(data.providerSnapshots));
+      setConsistency(
+        data.currentUser
+          ? buildConsistency(
+              data.consistency.score,
+              data.consistency.label,
+              data.currentUser.pillars,
+            )
+          : buildConsistency(undefined, undefined, onboardingDraftSeed.pillars),
+      );
+      setChatOverviews(data.chatOverviews);
+      setBootstrapStatus(isOnboarded ? "ready" : "needs_onboarding");
+      setBootstrapError(null);
+
+      if (data.currentUser) {
+        const liveUser = data.currentUser;
+        setOnboardingDraft({
+          goals: liveUser.goals,
+          pillars: liveUser.pillars,
+          accountabilityStyle: liveUser.accountabilityStyle,
+          defaultAudience: liveUser.defaultAudience ?? onboardingDraftSeed.defaultAudience,
+          name: liveUser.name,
+          username: liveUser.username,
+          missionLine: liveUser.missionLine,
+          city: liveUser.city ?? "",
+          selectedSquadId: liveUser.selectedSquadId,
+        });
+      }
+    } catch (error) {
+      if (mode === "bootstrap") {
+        setBootstrapStatus("error");
+        setBootstrapError(
+          getErrorMessage(
+            error,
+            "We could not load this account yet. Retry or sign out and try again.",
+          ),
+        );
+      }
+      throw error;
+    }
+  };
+
+  const handleAuthSessionChange = (session: Session | null) => {
+    const nextUserId = session?.user.id ?? null;
+    const userChanged = authUserIdRef.current !== nextUserId;
+
+    if (userChanged) {
+      resetUserScopedState();
+      setBootstrapStatus(nextUserId ? "loading" : "idle");
+      setBootstrapError(null);
+      setAuthError(null);
+    }
+
+    authUserIdRef.current = nextUserId;
+    setAuthUserId(nextUserId);
+    setAuthSession(session);
+    setAuthState(session ? "authenticated" : "signed-out");
+    setAuthEmail(session?.user.email ?? "");
+    if (!session) {
+      setBootstrapStatus("idle");
+      setBootstrapError(null);
+    }
+    setAuthReady(true);
+  };
+
+  const applyDemoState = () => {
+    setDemoMode(true);
+    setAuthState("demo");
+    setAuthUserId(null);
+    setAuthSession(null);
+    setAuthReady(true);
+    setBootstrapStatus("ready");
+    setBootstrapError(null);
+    setOnboardingComplete(true);
+    setCurrentUser(userSeed);
+    setFriends(friendsSeed);
+    setSquads(squadsSeed);
+    setHabits(habitsSeed);
+    setFeedPosts(postsSeed);
+    setProviderConnections({
+      "apple-health": appleHealthPreviewConnection,
+      strava: stravaPreviewConnection,
+      whoop: whoopPreviewConnection,
+    });
+    setProviderSnapshots({
+      "apple-health": appleHealthPreviewSnapshot,
+      strava: stravaPreviewSnapshot,
+      whoop: whoopPreviewSnapshot,
+    });
+    setHealthPreviewActive(true);
+    setManualFallbackEnabled(false);
+    setHealthLoading(false);
+    setHomeSegment("squads");
+    setCheckInDraft(checkInDraftSeed);
+    setConsistency(consistencySeed);
+    setLastPublishedPostId(null);
+    setChatOverviews(
+      squadsSeed.map((squad, index) => ({
+        squadId: squad.id,
+        unreadCount: index === 0 ? 2 : 0,
+        lastMessageAt: new Date().toISOString(),
+        lastMessagePreview:
+          index === 0 ? "Morning check-ins hit different when everyone shows up." : "",
+        lastMessageAuthorName: index === 0 ? "Maya Chen" : undefined,
+      })),
+    );
+    setSquadMessages({
+      "squad-1": [
+        {
+          id: "seed-chat-1",
+          squadId: "squad-1",
+          authorId: "friend-1",
+          authorName: "Maya Chen",
+          authorUsername: "mayamoves",
+          body: "Morning check-ins hit different when everyone shows up.",
+          createdAt: new Date(Date.now() - 1000 * 60 * 32).toISOString(),
+        },
+        {
+          id: "seed-chat-2",
+          squadId: "squad-1",
+          authorId: "friend-2",
+          authorName: "Jordan Ellis",
+          authorUsername: "jordanset",
+          body: "Posting mine after the lift. Keep the room honest today.",
+          createdAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
+        },
+      ],
+    });
   };
 
   useEffect(() => {
@@ -470,21 +701,20 @@ export function MomentumSessionProvider({
           const parsed = JSON.parse(raw) as Partial<PersistedFrontendState>;
           if (!cancelled) {
             if (parsed.homeSegment) setHomeSegment(parsed.homeSegment);
-            if (parsed.onboardingDraft) setOnboardingDraft(parsed.onboardingDraft);
-            if (parsed.checkInDraft) setCheckInDraft(parsed.checkInDraft);
-            if (typeof parsed.manualFallbackEnabled === "boolean") {
-              setManualFallbackEnabled(parsed.manualFallbackEnabled);
-            }
-            if (typeof parsed.healthPreviewActive === "boolean") {
-              setHealthPreviewActive(parsed.healthPreviewActive);
-            }
             if (typeof parsed.demoMode === "boolean") {
               persistedDemoMode = parsed.demoMode;
               setDemoMode(parsed.demoMode);
             }
-            if (parsed.authEmail) setAuthEmail(parsed.authEmail);
+            if ("authUserId" in parsed) {
+              authUserIdRef.current = parsed.authUserId ?? null;
+              setAuthUserId(parsed.authUserId ?? null);
+            }
           }
         }
+
+        await Promise.all(
+          legacySessionStorageKeys.map((key) => AsyncStorage.removeItem(key).catch(() => null)),
+        );
 
         const {
           data: { session },
@@ -492,17 +722,13 @@ export function MomentumSessionProvider({
 
         if (cancelled) return;
 
-        if (persistedDemoMode) {
-          setAuthState("demo");
-          setAuthReady(true);
+        if (persistedDemoMode && !session) {
+          applyDemoState();
           setSessionHydrated(true);
           return;
         }
 
-        setAuthSession(session);
-        setAuthState(session ? "authenticated" : "signed-out");
-        setAuthEmail(session?.user.email ?? "");
-        setAuthReady(true);
+        handleAuthSessionChange(session);
       } finally {
         if (!cancelled) {
           setSessionHydrated(true);
@@ -516,10 +742,7 @@ export function MomentumSessionProvider({
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (demoMode) return;
-      setAuthSession(session);
-      setAuthState(session ? "authenticated" : "signed-out");
-      setAuthEmail(session?.user.email ?? "");
-      setAuthReady(true);
+      handleAuthSessionChange(session);
     });
 
     return () => {
@@ -533,22 +756,20 @@ export function MomentumSessionProvider({
     if (!sessionHydrated) return;
 
     void persistFrontendState();
-  }, [
-    authEmail,
-    checkInDraft,
-    demoMode,
-    healthPreviewActive,
-    homeSegment,
-    manualFallbackEnabled,
-    onboardingDraft,
-    sessionHydrated,
-  ]);
+  }, [authUserId, demoMode, homeSegment, sessionHydrated]);
 
   useEffect(() => {
-    if (!authReady || authState !== "authenticated" || !authSession) return;
+    if (!authReady || authState !== "authenticated" || !authSession?.user.id) return;
+    if (
+      bootstrapStatus !== "idle" &&
+      bootstrapStatus !== "loading" &&
+      bootstrapStatus !== "error"
+    ) {
+      return;
+    }
 
-    void applyBackendData();
-  }, [authReady, authSession, authState]);
+    void applyBackendData({ mode: "bootstrap" });
+  }, [authReady, authSession?.user.id, authState, bootstrapStatus]);
 
   useEffect(() => {
     activeSquadChatRef.current = activeSquadChatId;
@@ -577,7 +798,14 @@ export function MomentumSessionProvider({
 
   const refreshFromBackend = async () => {
     if (authState !== "authenticated" || !authSession) return;
-    await applyBackendData();
+    await applyBackendData({
+      mode:
+        bootstrapStatus === "idle" ||
+        bootstrapStatus === "loading" ||
+        bootstrapStatus === "error"
+          ? "bootstrap"
+          : "refresh",
+    });
   };
 
   const setGoals = (goals: string[]) => {
@@ -626,7 +854,7 @@ export function MomentumSessionProvider({
       audience: !squadId && current.audience === "squad" ? "friends" : current.audience,
     }));
 
-    if (authState === "authenticated" && onboardingComplete) {
+    if (authState === "authenticated" && bootstrapStatus === "ready") {
       await persistSelectedSquad(squadId);
       await refreshFromBackend();
     }
@@ -679,16 +907,69 @@ export function MomentumSessionProvider({
     return squadId;
   };
 
-  const connectHealth = async (options?: { preview?: boolean }) => {
+  const connectProvider = async (
+    provider: ManagedIntegrationProvider,
+    options?: { preview?: boolean },
+  ) => {
+    if (provider !== "apple-health") {
+      if (authState !== "authenticated") {
+        throw new Error(`${formatProviderLabel(provider)} requires a signed-in account.`);
+      }
+
+      const currentConnection = providerConnections[provider];
+      setManagedProviderConnection(provider, {
+        ...currentConnection,
+        state: "authorizing",
+        lastError: undefined,
+      });
+
+      try {
+        const payload = await startProviderOAuth(provider);
+        const nextConnection = {
+          ...currentConnection,
+          state: "authorizing",
+          lastError: undefined,
+        } satisfies ConnectionRecord;
+        setManagedProviderConnection(provider, nextConnection);
+
+        const connectUrl = payload.authorizationUrl;
+        if (connectUrl) {
+          await Linking.openURL(connectUrl);
+        } else {
+          throw new Error(`Unable to open ${formatProviderLabel(provider)} connect flow.`);
+        }
+
+        return {
+          connection: nextConnection,
+          snapshot: providerSnapshots[provider] ?? null,
+        };
+      } catch (error) {
+        const message = getErrorMessage(
+          error,
+          `Unable to connect ${formatProviderLabel(provider)} right now.`,
+        );
+        setManagedProviderConnection(provider, {
+          ...currentConnection,
+          state: currentConnection.state === "connected" ? "connected" : "needs_attention",
+          lastError: message,
+        });
+        throw error;
+      }
+    }
+
     setHealthLoading(true);
 
     try {
+      const previousSnapshot = healthSnapshot;
       const result = await connectAppleHealth({ usePreview: options?.preview });
       let snapshot = result.snapshot;
-      setHealthConnection(normalizePersistedConnection(result.connection));
-      setHealthSnapshot(snapshot);
+      setManagedProviderConnection("apple-health", result.connection);
       setHealthPreviewActive(Boolean(options?.preview));
       setManualFallbackEnabled(false);
+
+      if (options?.preview || authState !== "authenticated") {
+        setManagedProviderSnapshot("apple-health", snapshot);
+      }
 
       if (
         authState === "authenticated" &&
@@ -720,7 +1001,7 @@ export function MomentumSessionProvider({
           });
           if (persistedSnapshot?.id) {
             snapshot = persistedSnapshot;
-            setHealthSnapshot(persistedSnapshot);
+            setManagedProviderSnapshot("apple-health", persistedSnapshot);
           }
           await refreshFromBackend();
         } catch (error) {
@@ -733,12 +1014,15 @@ export function MomentumSessionProvider({
             ...normalizePersistedConnection(result.connection),
             lastError: message,
           };
-          setHealthConnection(nextConnection);
+          setManagedProviderConnection("apple-health", nextConnection);
+          setManagedProviderSnapshot("apple-health", snapshot ?? previousSnapshot);
           return {
             connection: nextConnection,
-            snapshot,
+            snapshot: snapshot ?? previousSnapshot,
           };
         }
+      } else if (!options?.preview) {
+        setManagedProviderSnapshot("apple-health", snapshot);
       }
 
       return {
@@ -747,35 +1031,169 @@ export function MomentumSessionProvider({
       };
     } catch (error) {
       console.warn("Apple Health sync failed", error);
-      setHealthConnection((current) => ({
-        ...normalizePersistedConnection(current),
+      setManagedProviderConnection("apple-health", {
+        ...normalizePersistedConnection(healthConnection),
         state: "error",
         lastError: getErrorMessage(
           error,
           "Unable to connect Apple Health.",
         ),
-      }));
+      });
       throw error;
     } finally {
       setHealthLoading(false);
     }
   };
 
+  const refreshProvider = async (provider: ManagedIntegrationProvider) => {
+    if (provider === "apple-health") {
+      await connectProvider("apple-health");
+      return;
+    }
+
+    const currentConnection = providerConnections[provider];
+    setManagedProviderConnection(provider, {
+      ...currentConnection,
+      state: "syncing",
+      lastError: undefined,
+    });
+
+    try {
+      await syncRemoteProvider(provider);
+      await refreshFromBackend();
+    } catch (error) {
+      setManagedProviderConnection(provider, {
+        ...normalizeProviderConnection(provider, currentConnection),
+        state:
+          currentConnection.state === "connected" ||
+          currentConnection.state === "connected_limited"
+            ? currentConnection.state
+            : "needs_attention",
+        lastError: getErrorMessage(
+          error,
+          `Unable to refresh ${formatProviderLabel(provider)} right now.`,
+        ),
+      });
+      throw error;
+    }
+  };
+
+  const connectHealth = async (options?: { preview?: boolean }) =>
+    connectProvider("apple-health", options);
+
+  const handleIntegrationCallback = async (provider: ManagedIntegrationProvider) => {
+    if (!isManagedProvider(provider)) {
+      return;
+    }
+
+    setManagedProviderConnection(provider, {
+      ...providerConnections[provider],
+      state: "syncing",
+      lastError: undefined,
+    });
+    await refreshFromBackend();
+  };
+
+  useEffect(() => {
+    const handleUrl = ({ url }: { url: string }) => {
+      if (handledIntegrationUrlsRef.current.has(url)) {
+        return;
+      }
+      const callback = parseIntegrationCallbackUrl(url);
+      if (!callback || callback.provider === "apple-health") {
+        return;
+      }
+      handledIntegrationUrlsRef.current.add(url);
+
+      if (callback.status === "error") {
+        setManagedProviderConnection(callback.provider, {
+          ...providerConnections[callback.provider],
+          state: "needs_attention",
+          lastError:
+            callback.reason ??
+            `${formatProviderLabel(callback.provider)} could not finish connecting.`,
+        });
+        return;
+      }
+
+      if (callback.status === "disconnected") {
+        setManagedProviderConnection(callback.provider, {
+          ...providerConnections[callback.provider],
+          state: "disconnected",
+          lastError: undefined,
+        });
+        return;
+      }
+
+      void handleIntegrationCallback(callback.provider).catch((error) => {
+        setManagedProviderConnection(callback.provider, {
+          ...providerConnections[callback.provider],
+          state: "needs_attention",
+          lastError: getErrorMessage(
+            error,
+            `${formatProviderLabel(callback.provider)} needs another refresh.`,
+          ),
+        });
+      });
+    };
+
+    void Linking.getInitialURL()
+      .then((url) => {
+        if (url) {
+          handleUrl({ url });
+        }
+      })
+      .catch(() => null);
+
+    const subscription = Linking.addEventListener("url", handleUrl);
+
+    return () => {
+      subscription.remove();
+    };
+  }, [handleIntegrationCallback, providerConnections]);
+
   const enableManualFallback = () => {
     setManualFallbackEnabled(true);
     setHealthPreviewActive(false);
-    setHealthConnection((current) => ({
-      ...normalizePersistedConnection(current),
+    setManagedProviderConnection("apple-health", {
+      ...normalizePersistedConnection(healthConnection),
       state:
-        current.state === "connected" || current.state === "connected_limited"
-          ? current.state
+        healthConnection.state === "connected" || healthConnection.state === "connected_limited"
+          ? healthConnection.state
           : "needs_attention",
-    }));
+    });
+  };
+
+  const disconnectProvider = async (
+    provider: Exclude<ManagedIntegrationProvider, "apple-health">,
+  ) => {
+    const currentConnection = providerConnections[provider];
+    setManagedProviderConnection(provider, {
+      ...currentConnection,
+      state: "syncing",
+      lastError: undefined,
+    });
+
+    try {
+      await disconnectRemoteProvider(provider);
+      await refreshFromBackend();
+    } catch (error) {
+      setManagedProviderConnection(provider, {
+        ...normalizeProviderConnection(provider, currentConnection),
+        lastError: getErrorMessage(
+          error,
+          `Unable to disconnect ${formatProviderLabel(provider)} right now.`,
+        ),
+      });
+      throw error;
+    }
   };
 
   const completeOnboarding = async () => {
     if (authState === "demo") {
       setOnboardingComplete(true);
+      setBootstrapStatus("ready");
+      setBootstrapError(null);
       return;
     }
 
@@ -794,20 +1212,33 @@ export function MomentumSessionProvider({
       }));
     }
 
-    await bootstrapOnboarding({
-      name: onboardingDraft.name,
-      username: onboardingDraft.username,
-      missionLine: onboardingDraft.missionLine,
-      city: onboardingDraft.city,
-      pillars: onboardingDraft.pillars,
-      goals: onboardingDraft.goals,
-      accountabilityStyle: onboardingDraft.accountabilityStyle,
-      defaultAudience: onboardingDraft.defaultAudience,
-      selectedSquadId,
-    });
+    setBootstrapStatus("loading");
+    setBootstrapError(null);
 
-    setOnboardingComplete(true);
-    await refreshFromBackend();
+    try {
+      await bootstrapOnboarding({
+        name: onboardingDraft.name,
+        username: onboardingDraft.username,
+        missionLine: onboardingDraft.missionLine,
+        city: onboardingDraft.city,
+        pillars: onboardingDraft.pillars,
+        goals: onboardingDraft.goals,
+        accountabilityStyle: onboardingDraft.accountabilityStyle,
+        defaultAudience: onboardingDraft.defaultAudience,
+        selectedSquadId,
+      });
+
+      await applyBackendData({ mode: "bootstrap" });
+    } catch (error) {
+      setBootstrapStatus("error");
+      setBootstrapError(
+        getErrorMessage(
+          error,
+          "We could not finish setup yet. Retry after checking your profile details.",
+        ),
+      );
+      throw error;
+    }
   };
 
   const updateCheckInDraft = (patch: Partial<CheckInDraft>) => {
@@ -835,23 +1266,50 @@ export function MomentumSessionProvider({
       }));
     }
 
-    let snapshot = healthSnapshot;
-    let metrics = snapshot?.metrics ?? [];
+    let { provider: resolvedSourceProvider, snapshot, metrics } = pickProviderForCheckIn({
+      type: checkInDraft.type,
+      sourcePreference: checkInDraft.sourcePreference,
+      providerConnections,
+      providerSnapshots,
+      appleHealthPreviewActive: healthPreviewActive,
+    });
 
     if (
       checkInDraft.type === "workout" &&
       authState === "authenticated" &&
+      checkInDraft.sourcePreference !== "manual" &&
       !manualFallbackEnabled &&
-      !healthPreviewActive &&
+      (checkInDraft.sourcePreference === "auto" ||
+        checkInDraft.sourcePreference === "apple-health") &&
       !metrics.length &&
       !hasManualWorkoutDetails
     ) {
       const connected = await connectHealth();
-      snapshot = connected.snapshot;
-      metrics = snapshot?.metrics ?? [];
+      if (connected.snapshot) {
+        snapshot = connected.snapshot;
+      }
+      const nextSource = pickProviderForCheckIn({
+        type: checkInDraft.type,
+        sourcePreference: checkInDraft.sourcePreference,
+        providerConnections: {
+          ...providerConnections,
+          "apple-health": normalizePersistedConnection(connected.connection),
+        },
+        providerSnapshots: {
+          ...providerSnapshots,
+          "apple-health": connected.snapshot ?? snapshot,
+        },
+        appleHealthPreviewActive: healthPreviewActive,
+      });
+      resolvedSourceProvider = nextSource.provider;
+      snapshot = nextSource.snapshot;
+      metrics = nextSource.metrics;
     }
 
-    if (checkInDraft.type === "workout" && (manualFallbackEnabled || !metrics.length)) {
+    if (
+      checkInDraft.type === "workout" &&
+      (manualFallbackEnabled || resolvedSourceProvider === "manual" || !metrics.length)
+    ) {
       if (!hasManualWorkoutDetails) {
         throw new Error(
           "Manual fallback needs a workout name, duration, and active energy before you can publish.",
@@ -865,7 +1323,7 @@ export function MomentumSessionProvider({
         activeEnergy,
       });
       metrics = snapshot.metrics;
-      setHealthSnapshot(snapshot);
+      resolvedSourceProvider = "manual";
     }
 
     if (authState === "demo") {
@@ -890,7 +1348,20 @@ export function MomentumSessionProvider({
           label: metric.key,
           value: typeof metric.value === "boolean" ? String(metric.value) : metric.value ?? 0,
           unit: metric.unit,
+          provider: resolvedSourceProvider ?? metric.provider,
+          source: metric.source,
         })),
+        sourceProvider:
+          resolvedSourceProvider === "manual"
+            ? "manual"
+            : resolvedSourceProvider ?? "apple-health",
+        sourceProviders: Array.from(
+          new Set(
+            metrics
+              .map((metric) => metric.provider)
+              .filter((provider): provider is NonNullable<typeof provider> => Boolean(provider)),
+          ),
+        ),
         consistencyScore: nextConsistency.score,
         consistencyLabel: nextConsistency.label,
         reactions: {
@@ -906,13 +1377,12 @@ export function MomentumSessionProvider({
       return nextPost;
     }
 
-    const sourceProvider = usingManualWorkoutFallback
-      ? "manual"
-      : healthPreviewActive
-        ? "mock"
-        : metrics.length
-          ? "apple-health"
-          : "manual";
+    const sourceProvider =
+      usingManualWorkoutFallback || resolvedSourceProvider === "manual"
+        ? "manual"
+        : healthPreviewActive && resolvedSourceProvider === "apple-health"
+          ? "mock"
+          : resolvedSourceProvider ?? "manual";
 
     const createdPost = await createCheckIn({
       type: checkInDraft.type,
@@ -921,19 +1391,22 @@ export function MomentumSessionProvider({
       caption: checkInDraft.caption,
       sourceProvider,
       sourceSnapshotId:
-        usingManualWorkoutFallback || healthPreviewActive ? undefined : snapshot?.id,
+        usingManualWorkoutFallback ||
+        resolvedSourceProvider === "manual" ||
+        (healthPreviewActive && resolvedSourceProvider === "apple-health")
+          ? undefined
+          : snapshot?.id,
       metrics: metrics
-        .filter((metric) =>
-          checkInDraft.type === "workout"
-            ? ["workouts", "active-energy", "steps"].includes(metric.key)
-            : true,
-        )
+        .filter((metric) => getMetricsForPostType(snapshot, checkInDraft.type).some((item) => item.key === metric.key))
         .map((metric) => ({
           key: metric.key,
           value: metric.value ?? 0,
           unit: metric.unit ?? null,
           source: metric.source ?? null,
-          provider: usingManualWorkoutFallback ? "manual" : "apple-health",
+          provider:
+            usingManualWorkoutFallback || resolvedSourceProvider === "manual"
+              ? "manual"
+              : metric.provider,
           observedAt: metric.observedAt ?? null,
           confidence: metric.confidence,
         })),
@@ -1259,7 +1732,10 @@ export function MomentumSessionProvider({
     try {
       await signIn(email, password);
       setAuthEmail(email.trim());
-      await persistFrontendState({ demoMode: false, authEmail: email.trim() });
+      await persistFrontendState({
+        demoMode: false,
+        authUserId: authUserIdRef.current,
+      });
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Unable to sign in.");
       throw error;
@@ -1275,7 +1751,10 @@ export function MomentumSessionProvider({
     try {
       const result = await signUp(email, password);
       setAuthEmail(email.trim());
-      await persistFrontendState({ demoMode: false, authEmail: email.trim() });
+      await persistFrontendState({
+        demoMode: false,
+        authUserId: authUserIdRef.current,
+      });
       return {
         needsEmailConfirmation: result.requiresEmailConfirmation,
       };
@@ -1291,37 +1770,19 @@ export function MomentumSessionProvider({
     setAuthLoading(true);
     try {
       await signOut();
-      disconnectChatSubscriptions();
+      authUserIdRef.current = null;
       setDemoMode(false);
+      setAuthUserId(null);
       setAuthSession(null);
       setAuthState("signed-out");
       setAuthEmail("");
-      setOnboardingComplete(false);
-      setCurrentUser(emptyUser);
-      setFriends([]);
-      setSquads([]);
-      setHabits([]);
-      setFeedPosts([]);
+      setBootstrapStatus("idle");
+      setBootstrapError(null);
+      resetUserScopedState();
       setHomeSegment("squads");
-      setOnboardingDraft(onboardingDraftSeed);
-      setCheckInDraft(checkInDraftSeed);
-      setHealthConnection(defaultConnection);
-      setHealthSnapshot(null);
-      setHealthPreviewActive(false);
       setManualFallbackEnabled(false);
       setAuthError(null);
-      setChatOverviews([]);
-      setSquadMessages({});
-      setActiveSquadChatId(null);
-      await persistFrontendState({
-        homeSegment: "squads",
-        onboardingDraft: onboardingDraftSeed,
-        checkInDraft: checkInDraftSeed,
-        manualFallbackEnabled: false,
-        healthPreviewActive: false,
-        demoMode: false,
-        authEmail: "",
-      });
+      await AsyncStorage.removeItem(sessionStorageKey).catch(() => null);
     } finally {
       setAuthLoading(false);
     }
@@ -1490,83 +1951,69 @@ export function MomentumSessionProvider({
     await refreshFromBackend();
   };
 
+  const transferSquadOwnership = async (squadId: string, newOwnerId: string) => {
+    if (authState === "demo") {
+      setSquads((current) =>
+        current.map((squad) =>
+          squad.id === squadId ? { ...squad, ownerId: newOwnerId } : squad,
+        ),
+      );
+      return;
+    }
+
+    await persistTransferSquadOwnership(squadId, newOwnerId);
+    await refreshFromBackend();
+  };
+
+  const deleteAccount = async () => {
+    if (authState === "demo") {
+      await resetDemoSession();
+      return;
+    }
+
+    setAuthLoading(true);
+    setAuthError(null);
+
+    try {
+      await deleteAccountRequest();
+      await supabase.auth.signOut({ scope: "local" }).catch(() => null);
+      authUserIdRef.current = null;
+      setDemoMode(false);
+      setAuthUserId(null);
+      setAuthSession(null);
+      setAuthState("signed-out");
+      setAuthEmail("");
+      setAuthError(null);
+      setBootstrapStatus("idle");
+      setBootstrapError(null);
+      resetUserScopedState();
+      setHomeSegment("squads");
+      await AsyncStorage.removeItem(sessionStorageKey).catch(() => null);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   const startDemoSession = async () => {
-    setDemoMode(true);
-    setAuthState("demo");
-    setOnboardingComplete(true);
-    setCurrentUser(userSeed);
-    setFriends(friendsSeed);
-    setSquads(squadsSeed);
-    setHabits(habitsSeed);
-    setFeedPosts(postsSeed);
-    setHealthConnection(appleHealthPreviewConnection);
-    setHealthSnapshot(appleHealthPreviewSnapshot);
-    setHealthPreviewActive(true);
-    setManualFallbackEnabled(false);
-    setHealthLoading(false);
-    setHomeSegment("squads");
-    setCheckInDraft(checkInDraftSeed);
-    setConsistency(consistencySeed);
-    setLastPublishedPostId(null);
-    setChatOverviews(
-      squadsSeed.map((squad, index) => ({
-        squadId: squad.id,
-        unreadCount: index === 0 ? 2 : 0,
-        lastMessageAt: new Date().toISOString(),
-        lastMessagePreview: index === 0 ? "Morning check-ins hit different when everyone shows up." : "",
-        lastMessageAuthorName: index === 0 ? "Maya Chen" : undefined,
-      })),
-    );
-    setSquadMessages({
-      "squad-1": [
-        {
-          id: "seed-chat-1",
-          squadId: "squad-1",
-          authorId: "friend-1",
-          authorName: "Maya Chen",
-          authorUsername: "mayamoves",
-          body: "Morning check-ins hit different when everyone shows up.",
-          createdAt: new Date(Date.now() - 1000 * 60 * 32).toISOString(),
-        },
-        {
-          id: "seed-chat-2",
-          squadId: "squad-1",
-          authorId: "friend-2",
-          authorName: "Jordan Ellis",
-          authorUsername: "jordanset",
-          body: "Posting mine after the lift. Keep the room honest today.",
-          createdAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-        },
-      ],
-    });
+    authUserIdRef.current = null;
+    applyDemoState();
     await persistFrontendState({
       demoMode: true,
-      healthPreviewActive: true,
-      manualFallbackEnabled: false,
+      authUserId: null,
     });
   };
 
   const resetDemoSession = async () => {
-    disconnectChatSubscriptions();
     setDemoMode(false);
+    setAuthUserId(null);
+    authUserIdRef.current = null;
+    setAuthSession(null);
     setAuthState("signed-out");
-    setOnboardingComplete(false);
-    setOnboardingDraft(onboardingDraftSeed);
-    setCurrentUser(emptyUser);
-    setFriends([]);
-    setSquads([]);
-    setHabits([]);
-    setFeedPosts([]);
-    setHealthConnection(defaultConnection);
-    setHealthSnapshot(null);
-    setHealthPreviewActive(false);
-    setManualFallbackEnabled(false);
-    setCheckInDraft(checkInDraftSeed);
-    setConsistency(consistencySeed);
-    setLastPublishedPostId(null);
-    setChatOverviews([]);
-    setSquadMessages({});
-    setActiveSquadChatId(null);
+    setAuthEmail("");
+    setAuthError(null);
+    setBootstrapStatus("idle");
+    setBootstrapError(null);
+    resetUserScopedState();
     await AsyncStorage.removeItem(sessionStorageKey).catch(() => null);
   };
 
@@ -1575,6 +2022,8 @@ export function MomentumSessionProvider({
       sessionHydrated,
       authReady,
       authState,
+      bootstrapStatus,
+      bootstrapError,
       onboardingComplete,
       authEmail,
       onboardingDraft,
@@ -1584,6 +2033,8 @@ export function MomentumSessionProvider({
       habits,
       feedPosts,
       homeSegment,
+      providerConnections,
+      providerSnapshots,
       healthConnection,
       healthSnapshot,
       healthPreviewActive,
@@ -1603,6 +2054,8 @@ export function MomentumSessionProvider({
       setAccountabilityStyle,
       setProfileBasics,
       setSelectedSquad,
+      connectProvider,
+      refreshProvider,
       connectHealth,
       enableManualFallback,
       completeOnboarding,
@@ -1621,6 +2074,10 @@ export function MomentumSessionProvider({
       sendFriendInvite,
       createSquad,
       createSquadInviteToken,
+      disconnectProvider,
+      deleteAccount,
+      transferSquadOwnership,
+      handleIntegrationCallback,
       acceptInvite,
       openSquadChat,
       sendSquadMessage,
@@ -1637,6 +2094,8 @@ export function MomentumSessionProvider({
       authLoading,
       authReady,
       authState,
+      bootstrapError,
+      bootstrapStatus,
       chatLoading,
       chatOverviews,
       checkInDraft,
@@ -1644,8 +2103,11 @@ export function MomentumSessionProvider({
       createSquad,
       createSquadInviteToken,
       connectHealth,
+      connectProvider,
       consistency,
       currentUser,
+      disconnectProvider,
+      deleteAccount,
       feedPosts,
       friends,
       habits,
@@ -1659,10 +2121,15 @@ export function MomentumSessionProvider({
       manualFallbackEnabled,
       onboardingComplete,
       onboardingDraft,
+      providerConnections,
+      providerSnapshots,
+      refreshProvider,
       sessionHydrated,
       sendFriendInvite,
       squadMessages,
       squads,
+      transferSquadOwnership,
+      handleIntegrationCallback,
     ],
   );
 

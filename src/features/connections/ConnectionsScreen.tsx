@@ -5,7 +5,6 @@ import { useRouter } from "expo-router";
 import { theme } from "@/src/design";
 import { useMomentumSession } from "@/src/features/app/MomentumSessionProvider";
 import { HiddenDevToolsTrigger } from "@/src/features/dev/HiddenDevToolsTrigger";
-import { formatConnectionState } from "@/src/lib/formatters";
 import { Badge, Button, Card, EmptyState, ScrollScreen, TextField } from "@/src/ui/primitives";
 
 export function SquadsScreen() {
@@ -13,15 +12,10 @@ export function SquadsScreen() {
   const {
     acceptInvite,
     chatOverviews,
-    connectHealth,
     createSquad,
     createSquadInviteToken,
     currentUser,
-    enableManualFallback,
     friends,
-    healthConnection,
-    healthLoading,
-    manualFallbackEnabled,
     sendFriendInvite,
     setSelectedSquad,
     squads,
@@ -426,54 +420,20 @@ export function SquadsScreen() {
         </Card>
 
         <Card
-          title="Health sync"
-          subtitle="Apple Health keeps workout posts faster, richer, and more trustworthy."
+          title="Account and health settings"
+          subtitle="Provider management moved into the private account hub so existing users can reconnect without replaying setup."
         >
           <View style={styles.stack}>
-            <View style={styles.actions}>
-              <Badge
-                label={formatConnectionState(healthConnection.state)}
-                tone={
-                  healthConnection.state === "connected" ||
-                  healthConnection.state === "connected_limited"
-                    ? "success"
-                    : "warning"
-                }
-              />
-              {manualFallbackEnabled ? (
-                <Badge label="Manual fallback active" tone="warning" />
-              ) : null}
-            </View>
             <Text style={styles.helper}>
-              Refresh Apple Health here if your connection needs attention, or fall back to manual
-              workout details when you need to keep a post moving.
+              Use account settings to connect or refresh Apple Health, Strava, or WHOOP, review
+              the latest saved summaries, and manage sign-out or deletion safely.
             </Text>
-            {healthConnection.lastError ? (
-              <Text style={styles.error}>{healthConnection.lastError}</Text>
-            ) : null}
-            <View style={styles.actions}>
-              <Button
-                label={healthLoading ? "Refreshing Apple Health" : "Refresh Apple Health"}
-                fullWidth={false}
-                variant="secondary"
-                loading={healthLoading}
-                onPress={() =>
-                  void runAction("refresh-health", async () => {
-                    await connectHealth();
-                  })
-                }
-              />
-              <Button
-                label="Use manual fallback"
-                fullWidth={false}
-                variant="ghost"
-                onPress={() => {
-                  enableManualFallback();
-                  setActionError(null);
-                  setActionNotice("Manual workout fallback enabled.");
-                }}
-              />
-            </View>
+            <Button
+              label="Open account settings"
+              fullWidth={false}
+              variant="secondary"
+              onPress={() => router.push("/(app)/account")}
+            />
           </View>
         </Card>
       </View>

@@ -2,11 +2,15 @@ import React from "react";
 import {
   ActivityIndicator,
   Pressable,
-  PressableProps,
+  type PressableProps,
+  type PressableStateCallbackType,
   StyleSheet,
   Text,
-  ViewStyle,
+  View,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 
 import { theme } from "@/src/design";
 
@@ -29,27 +33,49 @@ export function Button({
   ...props
 }: ButtonProps) {
   const disabledState = disabled || loading;
+  const isPrimary = variant === "primary";
+  const indicatorColor =
+    variant === "primary"
+      ? theme.color.fg.inverse
+      : variant === "danger"
+        ? theme.color.accent.danger
+      : theme.color.fg.primary;
+
+  const resolveCallerStyle = (
+    state: PressableStateCallbackType,
+  ): StyleProp<ViewStyle> => (typeof style === "function" ? style(state) : style);
+
+  const content = loading ? (
+    <ActivityIndicator size="small" color={indicatorColor} />
+  ) : (
+    <Text style={[styles.label, labelStyles[variant]]}>{label}</Text>
+  );
+
   return (
     <Pressable
       accessibilityRole="button"
       disabled={disabledState}
-      style={({ pressed }) => [
+      style={(state) => [
         styles.base,
         fullWidth && styles.fullWidth,
         variantStyles[variant],
-        pressed && !disabledState && styles.pressed,
+        state.pressed && !disabledState && styles.pressed,
         disabledState && styles.disabled,
-        style as ViewStyle,
+        resolveCallerStyle(state),
       ]}
       {...props}
     >
-      {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={variant === "primary" ? theme.color.fg.inverse : theme.color.fg.primary}
-        />
+      {isPrimary ? (
+        <LinearGradient
+          colors={[theme.color.accent.energy, theme.color.accent.energySoft]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.fill}
+        >
+          {content}
+        </LinearGradient>
       ) : (
-        <Text style={[styles.label, labelStyles[variant]]}>{label}</Text>
+        <View style={[styles.fill, fillStyles[variant]]}>{content}</View>
       )}
     </Pressable>
   );
@@ -57,15 +83,20 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 48,
+    minHeight: 56,
     borderRadius: theme.radius.md,
-    paddingHorizontal: theme.spacing.lg,
-    alignItems: "center",
-    justifyContent: "center",
     borderWidth: theme.borderWidth.regular,
+    backgroundColor: theme.color.bg.surface,
+    overflow: "hidden",
   },
   fullWidth: {
     width: "100%",
+  },
+  fill: {
+    minHeight: 56,
+    paddingHorizontal: theme.spacing.lg,
+    alignItems: "center",
+    justifyContent: "center",
   },
   pressed: {
     transform: [{ scale: 0.985 }],
@@ -80,20 +111,34 @@ const styles = StyleSheet.create({
 
 const variantStyles = StyleSheet.create({
   primary: {
-    backgroundColor: theme.color.accent.energy,
     borderColor: theme.color.accent.energy,
   },
   secondary: {
-    backgroundColor: theme.color.bg.surface,
-    borderColor: theme.color.stroke.strong,
+    borderColor: theme.color.stroke.subtle,
+    backgroundColor: theme.color.bg.elevated,
+  },
+  ghost: {
+    borderColor: "transparent",
+    backgroundColor: "transparent",
+  },
+  danger: {
+    borderColor: theme.color.accent.danger,
+    backgroundColor: theme.color.bg.elevated,
+  },
+});
+
+const fillStyles = StyleSheet.create({
+  primary: {
+    backgroundColor: theme.color.accent.energy,
+  },
+  secondary: {
+    backgroundColor: "transparent",
   },
   ghost: {
     backgroundColor: "transparent",
-    borderColor: "transparent",
   },
   danger: {
-    backgroundColor: theme.color.accent.danger,
-    borderColor: theme.color.accent.danger,
+    backgroundColor: "transparent",
   },
 });
 
@@ -108,7 +153,6 @@ const labelStyles = StyleSheet.create({
     color: theme.color.accent.energy,
   },
   danger: {
-    color: theme.color.fg.inverse,
+    color: theme.color.accent.danger,
   },
 });
-

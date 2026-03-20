@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
   base: {
     borderRadius: theme.radius.pill,
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
+    paddingVertical: 10,
     borderWidth: theme.borderWidth.regular,
     borderColor: theme.color.stroke.subtle,
     backgroundColor: theme.color.bg.surface,

@@ -23,7 +23,6 @@ import {
   Badge,
   Button,
   Card,
-  Chip,
   ErrorState,
   LoadingSkeleton,
   MetricPill,
@@ -44,6 +43,54 @@ type StepShellProps = {
   footer: React.ReactNode;
 };
 
+const goalEditorialCopy: Record<
+  (typeof goalOptions)[number],
+  { eyebrow: string; subtitle: string; note?: string }
+> = {
+  "Train more consistently": {
+    eyebrow: "Steady rhythm",
+    subtitle: "Build a visible cadence so your circle sees the reps, not just the intention.",
+  },
+  "Sleep 7+ hours": {
+    eyebrow: "Recovery first",
+    subtitle: "Make better sleep part of the proof layer instead of a private guess.",
+  },
+  "Build mental sharpness": {
+    eyebrow: "Clear focus",
+    subtitle: "Track the habits that keep your head clean when the week gets crowded.",
+  },
+  "Stay accountable with friends": {
+    eyebrow: "Trusted people",
+    subtitle: "Keep your effort visible to people who know your baseline and want you to win.",
+  },
+  "Finish what I start": {
+    eyebrow: "Follow-through",
+    subtitle: "Let the app recognize consistency, not just big declarations.",
+  },
+};
+
+const pillarEditorialCopy: Record<
+  FocusPillar,
+  { eyebrow: string; subtitle: string }
+> = {
+  fitness: {
+    eyebrow: "Movement",
+    subtitle: "Workouts, physical effort, and the proof that you showed up.",
+  },
+  mindset: {
+    eyebrow: "State of mind",
+    subtitle: "Mental clarity, discipline, and the systems that keep you steady.",
+  },
+  learning: {
+    eyebrow: "Growth",
+    subtitle: "Reading, studying, and the work that expands your range over time.",
+  },
+  recovery: {
+    eyebrow: "Repair",
+    subtitle: "Sleep, restoration, and the signals that keep momentum sustainable.",
+  },
+};
+
 function StepShell({
   step,
   total,
@@ -57,20 +104,22 @@ function StepShell({
 
   return (
     <ScrollScreen contentContainerStyle={styles.screenContent}>
+      <View style={styles.chromeRow}>
+        <HiddenDevToolsTrigger>
+          <Text style={styles.wordmark}>OUTTCAST</Text>
+        </HiddenDevToolsTrigger>
+        {backHref ? (
+          <Pressable onPress={() => router.replace(backHref)}>
+            <Text style={styles.backLink}>Back</Text>
+          </Pressable>
+        ) : (
+          <Text style={styles.topNote}>Private by design</Text>
+        )}
+      </View>
       <View style={styles.stepHeader}>
-        <View style={styles.stepRow}>
-          <HiddenDevToolsTrigger>
-            <Badge label={`Step ${step} / ${total}`} tone="accent" />
-          </HiddenDevToolsTrigger>
-          {backHref ? (
-            <Button
-              label="Back"
-              variant="ghost"
-              fullWidth={false}
-              onPress={() => router.replace(backHref)}
-            />
-          ) : null}
-        </View>
+        <HiddenDevToolsTrigger>
+          <Badge label={`Step ${step} / ${total}`} tone="accent" />
+        </HiddenDevToolsTrigger>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
         <View style={styles.progressTrack}>
@@ -91,24 +140,36 @@ function StepShell({
   );
 }
 
-function SelectableCard({
+function SelectionSlab({
+  eyebrow,
   title,
   subtitle,
   selected,
   onPress,
+  metaLabel,
 }: {
+  eyebrow: string;
   title: string;
   subtitle: string;
   selected: boolean;
   onPress: () => void;
+  metaLabel?: string;
 }) {
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.selectableCard, selected && styles.selectableCardSelected]}
+      style={[styles.selectionSlab, selected && styles.selectionSlabSelected]}
     >
-      <Text style={styles.selectableTitle}>{title}</Text>
-      <Text style={styles.selectableSubtitle}>{subtitle}</Text>
+      <View style={styles.selectionSlabTop}>
+        <Text style={styles.selectionEyebrow}>{eyebrow}</Text>
+        {selected ? (
+          <Badge label="Selected" tone="accent" />
+        ) : metaLabel ? (
+          <Text style={styles.selectionMeta}>{metaLabel}</Text>
+        ) : null}
+      </View>
+      <Text style={styles.selectionTitle}>{title}</Text>
+      <Text style={styles.selectionSubtitle}>{subtitle}</Text>
     </Pressable>
   );
 }
@@ -133,21 +194,40 @@ export function WelcomeScreen() {
 
   return (
     <ScrollScreen contentContainerStyle={styles.screenContent}>
+      <View style={styles.chromeRow}>
+        <HiddenDevToolsTrigger>
+          <Text style={styles.wordmark}>OUTTCAST</Text>
+        </HiddenDevToolsTrigger>
+        <Text style={styles.topNote}>Private by design</Text>
+      </View>
       <LinearGradient
-        colors={["#0F172A", "#0E7490", "#E0F2FE"]}
+        colors={[theme.color.bg.surface, theme.color.bg.elevated, "#E7EEFF"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.hero}
       >
-        <HiddenDevToolsTrigger>
-          <Badge label="Outtcast" tone="accent" />
-        </HiddenDevToolsTrigger>
+        <Badge label="Curated invitation" tone="accent" />
         <Text style={styles.heroTitle}>Show the work.</Text>
         <Text style={styles.heroBody}>
           Turn workouts, habits, and recovery into visible momentum with people
           who want to see you win.
         </Text>
       </LinearGradient>
+
+      <View style={styles.welcomeGrid}>
+        <View style={styles.welcomePanel}>
+          <Text style={styles.welcomePanelTitle}>Trusted circle</Text>
+          <Text style={styles.welcomePanelBody}>
+            Share progress where effort is understood instead of broadcast.
+          </Text>
+        </View>
+        <View style={styles.welcomePanel}>
+          <Text style={styles.welcomePanelTitle}>Health-backed proof</Text>
+          <Text style={styles.welcomePanelBody}>
+            Let Apple Health support the story without making your life public.
+          </Text>
+        </View>
+      </View>
 
       <Card
         title="Why people open Outtcast"
@@ -199,15 +279,25 @@ export function GoalsScreen() {
         />
       }
     >
-      <View style={styles.wrap}>
+      <View style={styles.stack}>
         {goalOptions.map((goal) => (
-          <Chip
+          <SelectionSlab
             key={goal}
-            label={goal}
+            eyebrow={goalEditorialCopy[goal].eyebrow}
+            title={goal}
+            subtitle={goalEditorialCopy[goal].subtitle}
             selected={selected.includes(goal)}
             onPress={() => toggleGoal(goal)}
+            metaLabel={goalEditorialCopy[goal].note}
           />
         ))}
+      </View>
+      <View style={styles.editorialNote}>
+        <Text style={styles.editorialNoteEyebrow}>Private by default</Text>
+        <Text style={styles.editorialNoteBody}>
+          Start with the improvements you want the app to notice first. You can keep
+          everything else out of view until it matters.
+        </Text>
       </View>
     </StepShell>
   );
@@ -241,22 +331,25 @@ export function PillarsScreen() {
         />
       }
     >
-      <View style={styles.wrap}>
+      <View style={styles.stack}>
         {pillarOptions.map((pillar) => (
-          <Chip
+          <SelectionSlab
             key={pillar.value}
-            label={pillar.label}
+            eyebrow={pillarEditorialCopy[pillar.value].eyebrow}
+            title={pillar.label}
+            subtitle={pillarEditorialCopy[pillar.value].subtitle}
             selected={selected.includes(pillar.value)}
             onPress={() => togglePillar(pillar.value)}
           />
         ))}
       </View>
-      <Card subtitle="Share the progress that helps your circle understand your momentum. Keep everything else on your terms.">
-        <Text style={styles.bodyCopy}>
-          Your profile should feel focused and lived-in, not like a dashboard of
-          everything you do.
+      <View style={styles.editorialNote}>
+        <Text style={styles.editorialNoteEyebrow}>Visible pillars</Text>
+        <Text style={styles.editorialNoteBody}>
+          Share the progress that helps your circle understand your momentum. Keep
+          everything else on your own terms.
         </Text>
-      </Card>
+      </View>
     </StepShell>
   );
 }
@@ -304,21 +397,25 @@ export function SharingScreen() {
     >
       <View style={styles.stack}>
         {options.map((option) => (
-          <SelectableCard
+          <SelectionSlab
             key={option.value}
+            eyebrow="Accountability lane"
             title={option.title}
             subtitle={option.subtitle}
             selected={selected === option.value}
             onPress={() => setAccountabilityStyle(option.value)}
+            metaLabel={option.value === "squad-first" ? "Tighter rhythm" : undefined}
           />
         ))}
       </View>
-      <Card title="How sharing starts" subtitle="Your first check-in starts with Friends unless you post from a squad.">
-        <Text style={styles.bodyCopy}>
-          Home still opens on Squads to keep accountability grounded in real
-          people, not broadcasting.
+      <View style={styles.editorialNote}>
+        <Text style={styles.editorialNoteEyebrow}>How sharing starts</Text>
+        <Text style={styles.editorialNoteBody}>
+          Your first check-in starts with Friends unless you post from a squad. Home
+          still opens on Squads so accountability feels grounded in people, not
+          broadcasting.
         </Text>
-      </Card>
+      </View>
     </StepShell>
   );
 }
@@ -370,48 +467,74 @@ export function ProfileBasicsScreen() {
       backHref="/(onboarding)/sharing"
       footer={<Button label="Connect health" onPress={submit} />}
     >
-      <View style={styles.stack}>
-        <TextField
-          label="Name"
-          value={name}
-          onChangeText={setName}
-          errorText={errors.name}
-        />
-        <TextField
-          label="Username"
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
-          errorText={errors.username}
-          helperText="People only see this inside the circles you choose."
-        />
-        <TextField
-          label="Mission line"
-          value={missionLine}
-          onChangeText={setMissionLine}
-          multiline
-          errorText={errors.missionLine}
-          helperText="Example: Rebuilding my baseline one strong week at a time."
-        />
-        <TextField
-          label="City"
-          value={city}
-          onChangeText={setCity}
-          helperText="Optional, if place matters to your story."
-        />
-      </View>
-      <Card title="Profile preview">
-        <Text style={styles.previewName}>{name || "Your name"}</Text>
-        <Text style={styles.previewUsername}>@{username || "username"}</Text>
-        <Text style={styles.bodyCopy}>
-          {missionLine || "Your mission line will preview here."}
+      <LinearGradient
+        colors={[theme.color.bg.surface, theme.color.bg.elevated, "#E7EEFF"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.identityHero}
+      >
+        <Text style={styles.identityEyebrow}>Mission-led profile</Text>
+        <Text style={styles.identityMission}>
+          {missionLine || "Write the line that tells people what you are building toward."}
         </Text>
-        <View style={styles.wrap}>
-          {onboardingDraft.pillars.map((pillar) => (
-            <Pill key={pillar} label={pillar} />
-          ))}
+        <View style={styles.identityMeta}>
+          <View style={styles.identityNames}>
+            <Text style={styles.identityName}>{name || "Your name"}</Text>
+            <Text style={styles.identityUsername}>@{username || "username"}</Text>
+          </View>
+          <View style={styles.wrap}>
+            {onboardingDraft.pillars.map((pillar) => (
+              <Pill key={pillar} label={pillar} />
+            ))}
+          </View>
         </View>
-      </Card>
+      </LinearGradient>
+
+      <View style={styles.stack}>
+        <Card title="Identity">
+          <TextField
+            label="Name"
+            value={name}
+            onChangeText={setName}
+            placeholder="Max Stone"
+            errorText={errors.name}
+          />
+          <TextField
+            label="Username"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+            placeholder="maxmomentum"
+            errorText={errors.username}
+            helperText="People only see this inside the circles you choose."
+          />
+        </Card>
+        <Card title="Direction">
+          <TextField
+            label="Mission line"
+            value={missionLine}
+            onChangeText={setMissionLine}
+            multiline
+            placeholder="Building a stronger baseline, one honest check-in at a time."
+            errorText={errors.missionLine}
+            helperText="One clean line is enough. Let the proof underneath earn it."
+          />
+          <TextField
+            label="City"
+            value={city}
+            onChangeText={setCity}
+            placeholder="New York"
+            helperText="Optional, if place matters to your story."
+          />
+        </Card>
+      </View>
+      <View style={styles.editorialNote}>
+        <Text style={styles.editorialNoteEyebrow}>Private identity</Text>
+        <Text style={styles.editorialNoteBody}>
+          The profile is built for your trusted circle. It should feel earned, lived-in,
+          and specific before the first piece of proof lands.
+        </Text>
+      </View>
     </StepShell>
   );
 }
@@ -490,7 +613,11 @@ export function ConnectHealthScreen() {
         />
       }
     >
-      <Card title="Connection state" subtitle="Syncing makes your updates faster, clearer, and more grounded in what you actually did.">
+      <Card
+        title="Health-backed proof"
+        subtitle="Syncing makes your updates faster, clearer, and more grounded in what you actually did."
+        elevated
+      >
         <View style={styles.row}>
           <Badge
             label={formatConnectionState(healthConnection.state)}
@@ -525,12 +652,9 @@ export function ConnectHealthScreen() {
         {(healthConnection.state === "connected" ||
           healthConnection.state === "connected_limited") &&
         healthConnection.lastError ? (
-          <Card
-            title="Health summary needs one more try"
-            subtitle="Apple Health connected on this device, but the latest summary did not save cleanly yet."
-          >
-            <Text style={styles.bodyCopy}>{healthConnection.lastError}</Text>
-          </Card>
+          <View style={styles.editorialNoteSoft}>
+            <Text style={styles.editorialNoteBody}>{healthConnection.lastError}</Text>
+          </View>
         ) : null}
         {healthConnection.state === "unavailable" ||
         healthConnection.state === "needs_attention" ||
@@ -541,12 +665,13 @@ export function ConnectHealthScreen() {
           />
         ) : null}
         {manualFallbackEnabled ? (
-          <Card subtitle="Manual entry is on">
-            <Text style={styles.bodyCopy}>
-              You can still share workouts and progress even when syncing is not
-              ready yet.
+          <View style={styles.editorialNoteSoft}>
+            <Text style={styles.editorialNoteEyebrow}>Manual fallback is active</Text>
+            <Text style={styles.editorialNoteBody}>
+              You can still share workouts and progress even when syncing is not ready
+              yet.
             </Text>
-          </Card>
+          </View>
         ) : null}
         <View style={styles.stack}>
           <Button
@@ -554,15 +679,20 @@ export function ConnectHealthScreen() {
             loading={healthLoading}
             onPress={() => void connectHealth()}
           />
-          <Button
-            label="Use manual entry for now"
-            variant="ghost"
-            onPress={enableManualFallback}
-          />
+          {!manualFallbackEnabled ? (
+            <Button
+              label="Use manual entry for now"
+              variant="ghost"
+              onPress={enableManualFallback}
+            />
+          ) : null}
         </View>
       </Card>
 
-      <Card title="What sync can include" subtitle="Outtcast looks for workouts, steps, sleep, and active energy.">
+      <Card
+        title="Coverage and privacy"
+        subtitle="Outtcast looks for workouts, steps, sleep, and active energy, then turns them into a readable proof layer."
+      >
         {healthConnection.coverage.map((item) => (
           <StatRow
             key={item.key}
@@ -571,9 +701,6 @@ export function ConnectHealthScreen() {
             hint={formatCoverageReason(item.reason)}
           />
         ))}
-      </Card>
-
-      <Card title="Privacy posture" subtitle="Shared updates use a summary of your progress, not a stream of raw personal data.">
         <Text style={styles.bodyCopy}>
           Apple Health data stays private by default. Outtcast uses a simple
           summary to support the progress you choose to share.
@@ -635,6 +762,7 @@ export function SquadStepScreen() {
           <Card
             title="Join Day ones"
             subtitle="A starter squad for people building from the beginning."
+            elevated
           >
             <Text style={styles.bodyCopy}>
               Jump into a room where people are showing up, posting honestly, and
@@ -654,14 +782,23 @@ export function SquadStepScreen() {
           />
         ) : null}
         {visibleSquads.map((squad) => (
-          <SelectableCard
+          <SelectionSlab
             key={squad.id}
+            eyebrow={squad.handle === "day-ones" ? "Starter room" : "Private squad"}
             title={squad.name}
             subtitle={`${squad.memberCount} people • ${squad.currentFocus}`}
             selected={currentUser.selectedSquadId === squad.id}
             onPress={() => setSelectedSquad(squad.id)}
+            metaLabel={squad.handle === "day-ones" ? "Open now" : undefined}
           />
         ))}
+      </View>
+      <View style={styles.editorialNote}>
+        <Text style={styles.editorialNoteEyebrow}>Skip is okay</Text>
+        <Text style={styles.editorialNoteBody}>
+          You can start with Friends and choose a tighter room later. The goal is
+          accountability, not friction.
+        </Text>
       </View>
     </StepShell>
   );
@@ -696,67 +833,147 @@ export function RecapScreen() {
   };
 
   return (
-    <StepShell
-      step={7}
-      total={7}
-      title="You’re set up to show the work"
-      subtitle="Next up: share your first workout so your circle can see the work."
-      backHref="/(onboarding)/squad"
-      footer={
-        <Button
-          label="Start first workout check-in"
-          loading={submitting}
-          onPress={() => void submit()}
-        />
-      }
-    >
-      <Card title={currentUser.name} subtitle={`@${currentUser.username}`}>
-        <Text style={styles.bodyCopy}>{currentUser.missionLine}</Text>
-        <View style={styles.wrap}>
-          {currentUser.pillars.map((pillar) => (
-            <Pill key={pillar} label={pillar} />
+    <ScrollScreen contentContainerStyle={styles.screenContent}>
+      <View style={styles.chromeRow}>
+        <HiddenDevToolsTrigger>
+          <Text style={styles.wordmark}>OUTTCAST</Text>
+        </HiddenDevToolsTrigger>
+        <Pressable onPress={() => router.replace("/(onboarding)/squad")}>
+          <Text style={styles.backLink}>Back</Text>
+        </Pressable>
+      </View>
+      <View style={styles.stepHeader}>
+        <Badge label="Step 7 / 7" tone="accent" />
+        <View style={styles.progressTrack}>
+          {Array.from({ length: 7 }, (_, index) => (
+            <View
+              key={`recap-progress-${index + 1}`}
+              style={[
+                styles.progressSegment,
+                styles.progressSegmentActive,
+              ]}
+            />
           ))}
         </View>
-        <View style={styles.row}>
-          <Badge label={formatConnectionState(healthConnection.state)} tone="accent" />
-          {selectedSquad ? <Badge label={selectedSquad.name} tone="neutral" /> : null}
+      </View>
+      <LinearGradient
+        colors={[theme.color.bg.surface, theme.color.bg.elevated, "#E7EEFF"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.recapHero}
+      >
+        <Text style={styles.recapEyebrow}>Your lane is ready</Text>
+        <Text style={styles.recapHeroTitle}>You’re set up to show the work.</Text>
+        <Text style={styles.recapHeroBody}>
+          Next up: share one honest workout so your circle can see the work without
+          any extra noise.
+        </Text>
+        <View style={styles.recapIdentity}>
+          <Text style={styles.previewName}>{currentUser.name}</Text>
+          <Text style={styles.previewUsername}>@{currentUser.username}</Text>
+          <Text style={styles.bodyCopy}>{currentUser.missionLine}</Text>
+          <View style={styles.wrap}>
+            {currentUser.pillars.map((pillar) => (
+              <Pill key={pillar} label={pillar} />
+            ))}
+          </View>
+          <View style={styles.row}>
+            <Badge label={formatConnectionState(healthConnection.state)} tone="accent" />
+            {selectedSquad ? <Badge label={selectedSquad.name} tone="neutral" /> : null}
+          </View>
         </View>
-      </Card>
+      </LinearGradient>
       <ConsistencyCard consistency={consistency} compact />
+      <View style={styles.editorialNote}>
+        <Text style={styles.editorialNoteEyebrow}>First move</Text>
+        <Text style={styles.editorialNoteBody}>
+          Keep the note short, let the proof lead, and publish into the lane that feels
+          most honest.
+        </Text>
+      </View>
       {submitError ? (
         <ErrorState
           title="Setup still needs one fix"
           message={submitError}
         />
       ) : null}
-    </StepShell>
+      <View style={styles.footer}>
+        <Button
+          label="Start first workout check-in"
+          loading={submitting}
+          onPress={() => void submit()}
+        />
+      </View>
+    </ScrollScreen>
   );
 }
 
 const styles = StyleSheet.create({
   screenContent: {
     flexGrow: 1,
-    gap: theme.spacing.lg,
+    gap: theme.spacing.xl,
+  },
+  chromeRow: {
+    flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+  },
+  wordmark: {
+    ...theme.typography.caption,
+    color: theme.color.fg.primary,
+    letterSpacing: 2.2,
+  },
+  backLink: {
+    ...theme.typography.label,
+    color: theme.color.accent.energy,
+  },
+  topNote: {
+    ...theme.typography.caption,
+    color: theme.color.fg.secondary,
+    letterSpacing: 0.6,
   },
   hero: {
     borderRadius: theme.radius.lg,
     padding: theme.spacing.lg,
     gap: theme.spacing.md,
-    minHeight: 260,
+    minHeight: 240,
     justifyContent: "flex-end",
+    borderWidth: theme.borderWidth.hairline,
+    borderColor: theme.color.stroke.subtle,
   },
   heroTitle: {
     ...theme.typography.hero,
-    color: theme.color.fg.inverse,
+    color: theme.color.fg.primary,
   },
   heroBody: {
     ...theme.typography.body,
-    color: theme.color.fg.inverse,
-    maxWidth: 280,
+    color: theme.color.fg.secondary,
+    maxWidth: 320,
+  },
+  welcomeGrid: {
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+  },
+  welcomePanel: {
+    flex: 1,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.color.bg.surface,
+    borderWidth: theme.borderWidth.hairline,
+    borderColor: theme.color.stroke.subtle,
+    padding: theme.spacing.md,
+    gap: theme.spacing.xs,
+  },
+  welcomePanelTitle: {
+    ...theme.typography.label,
+    color: theme.color.fg.primary,
+  },
+  welcomePanelBody: {
+    ...theme.typography.bodySmall,
+    color: theme.color.fg.secondary,
   },
   stepHeader: {
-    gap: theme.spacing.sm,
+    gap: theme.spacing.md,
+    maxWidth: 340,
   },
   progressTrack: {
     flexDirection: "row",
@@ -764,7 +981,7 @@ const styles = StyleSheet.create({
   },
   progressSegment: {
     flex: 1,
-    height: 6,
+    height: 4,
     borderRadius: theme.radius.pill,
   },
   progressSegmentActive: {
@@ -772,11 +989,6 @@ const styles = StyleSheet.create({
   },
   progressSegmentIdle: {
     backgroundColor: theme.color.stroke.subtle,
-  },
-  stepRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
   },
   title: {
     ...theme.typography.title,
@@ -787,10 +999,11 @@ const styles = StyleSheet.create({
     color: theme.color.fg.secondary,
   },
   body: {
-    gap: theme.spacing.md,
+    gap: theme.spacing.lg,
   },
   footer: {
     gap: theme.spacing.sm,
+    paddingTop: theme.spacing.sm,
   },
   wrap: {
     flexDirection: "row",
@@ -812,23 +1025,99 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.color.fg.muted,
   },
-  selectableCard: {
+  identityHero: {
     borderRadius: theme.radius.lg,
-    borderWidth: theme.borderWidth.regular,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.md,
+    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.color.stroke.subtle,
-    backgroundColor: theme.color.bg.surface,
-    padding: theme.spacing.md,
-    gap: theme.spacing.xs,
   },
-  selectableCardSelected: {
+  identityEyebrow: {
+    ...theme.typography.caption,
+    color: theme.color.accent.energy,
+    letterSpacing: 0.8,
+  },
+  identityMission: {
+    ...theme.typography.heading,
+    fontFamily: theme.typography.title.fontFamily,
+    fontSize: 28,
+    lineHeight: 32,
+    letterSpacing: -0.5,
+    color: theme.color.fg.primary,
+  },
+  identityMeta: {
+    gap: theme.spacing.sm,
+  },
+  identityNames: {
+    gap: theme.spacing.xxs,
+  },
+  identityName: {
+    ...theme.typography.heading,
+    color: theme.color.fg.primary,
+  },
+  identityUsername: {
+    ...theme.typography.caption,
+    color: theme.color.fg.secondary,
+  },
+  selectionSlab: {
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.color.bg.surface,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.sm,
+    borderWidth: theme.borderWidth.hairline,
+    borderColor: theme.color.stroke.subtle,
+  },
+  selectionSlabSelected: {
     borderColor: theme.color.accent.energy,
     backgroundColor: theme.color.bg.elevated,
   },
-  selectableTitle: {
-    ...theme.typography.label,
+  selectionSlabTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: theme.spacing.sm,
+  },
+  selectionEyebrow: {
+    ...theme.typography.caption,
+    color: theme.color.fg.muted,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  selectionMeta: {
+    ...theme.typography.caption,
+    color: theme.color.fg.muted,
+  },
+  selectionTitle: {
+    ...theme.typography.heading,
+    fontFamily: theme.typography.title.fontFamily,
+    fontSize: 24,
+    lineHeight: 28,
+    letterSpacing: -0.4,
     color: theme.color.fg.primary,
   },
-  selectableSubtitle: {
+  selectionSubtitle: {
+    ...theme.typography.bodySmall,
+    color: theme.color.fg.secondary,
+  },
+  editorialNote: {
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.color.bg.elevated,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.xs,
+  },
+  editorialNoteSoft: {
+    borderRadius: theme.radius.md,
+    backgroundColor: "#F6F8FD",
+    padding: theme.spacing.md,
+    gap: theme.spacing.xs,
+  },
+  editorialNoteEyebrow: {
+    ...theme.typography.caption,
+    color: theme.color.fg.muted,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  editorialNoteBody: {
     ...theme.typography.bodySmall,
     color: theme.color.fg.secondary,
   },
@@ -841,5 +1130,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: theme.spacing.xs,
+  },
+  recapHero: {
+    borderRadius: theme.radius.lg,
+    borderWidth: theme.borderWidth.hairline,
+    borderColor: theme.color.stroke.subtle,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.md,
+  },
+  recapEyebrow: {
+    ...theme.typography.caption,
+    color: theme.color.accent.energy,
+    letterSpacing: 0.8,
+  },
+  recapHeroTitle: {
+    ...theme.typography.title,
+    color: theme.color.fg.primary,
+  },
+  recapHeroBody: {
+    ...theme.typography.body,
+    color: theme.color.fg.secondary,
+  },
+  recapIdentity: {
+    gap: theme.spacing.sm,
   },
 });

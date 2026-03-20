@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
 
 import { theme } from "@/src/design";
 import { useMomentumSession } from "@/src/features/app/MomentumSessionProvider";
@@ -9,7 +8,6 @@ import { HiddenDevToolsTrigger } from "@/src/features/dev/HiddenDevToolsTrigger"
 import { Badge, Button, Card, ScrollScreen, TextField } from "@/src/ui/primitives";
 
 export function AuthScreen() {
-  const router = useRouter();
   const { authError, authLoading, signIn, signUp } = useMomentumSession();
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [email, setEmail] = useState("");
@@ -32,7 +30,6 @@ export function AuthScreen() {
     try {
       if (mode === "sign-in") {
         await signIn(email, password);
-        router.replace("/(onboarding)/welcome");
       } else {
         const result = await signUp(email, password);
         if (result.needsEmailConfirmation) {
@@ -41,7 +38,6 @@ export function AuthScreen() {
           );
           return;
         }
-        router.replace("/(onboarding)/welcome");
       }
     } catch (error) {
       setSubmitError(

@@ -1,0 +1,41 @@
+[
+  {
+    "slug": "variant-a",
+    "title": "Outtcast Onboarding Redesign",
+    "project_name": "projects/289691776004504741",
+    "updated_at": "2026-03-20T00:05:22.701180Z",
+    "thumbnail_file": "variant-a.png",
+    "custom_color": "#1E40AF",
+    "headline_font": "NEWSREADER",
+    "body_font": "MANROPE",
+    "primary": "#00288e",
+    "secondary": "#446273",
+    "surface": "#f8f9ff"
+  },
+  {
+    "slug": "variant-b",
+    "title": "Outtcast Onboarding Variant B",
+    "project_name": "projects/1935926039581444317",
+    "updated_at": "2026-03-20T00:12:48.255761Z",
+    "thumbnail_file": "variant-b.png",
+    "custom_color": "#0047AB",
+    "headline_font": "NEWSREADER",
+    "body_font": "MANROPE",
+    "primary": "#00327d",
+    "secondary": "#446273",
+    "surface": "#f9f9f7"
+  },
+  {
+    "slug": "variant-c",
+    "title": "Outtcast Onboarding Variant C",
+    "project_name": "projects/8784021154905013801",
+    "updated_at": "2026-03-20T00:12:59.116991Z",
+    "thumbnail_file": "variant-c.png",
+    "custom_color": "#2E5BFF",
+    "headline_font": "MANROPE",
+    "body_font": "MANROPE",
+    "primary": "#0040e0",
+    "secondary": "#346666",
+    "surface": "#fcf8f9"
+  }
+]

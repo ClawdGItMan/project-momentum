@@ -24,11 +24,12 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     borderRadius: theme.radius.pill,
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderWidth: theme.borderWidth.hairline,
   },
   label: {
     ...theme.typography.caption,
+    letterSpacing: 0.7,
   },
 });
 
@@ -38,20 +39,20 @@ const toneStyles = StyleSheet.create({
     borderColor: theme.color.stroke.subtle,
   },
   success: {
-    backgroundColor: "#EAF9F2",
-    borderColor: "#A7E9CC",
+    backgroundColor: theme.color.bg.elevated,
+    borderColor: theme.color.accent.success,
   },
   warning: {
-    backgroundColor: "#FFF7E8",
-    borderColor: "#FCDDA5",
+    backgroundColor: theme.color.bg.elevated,
+    borderColor: theme.color.accent.warning,
   },
   danger: {
-    backgroundColor: "#FFECEF",
-    borderColor: "#F9B8C6",
+    backgroundColor: theme.color.bg.elevated,
+    borderColor: theme.color.accent.danger,
   },
   accent: {
     backgroundColor: theme.color.chip.bg,
-    borderColor: "#9ADAF4",
+    borderColor: theme.color.stroke.subtle,
   },
 });
 
@@ -60,16 +61,15 @@ const labelToneStyles = StyleSheet.create({
     color: theme.color.fg.secondary,
   },
   success: {
-    color: "#0F8A58",
+    color: theme.color.accent.success,
   },
   warning: {
-    color: "#A46200",
+    color: theme.color.accent.warning,
   },
   danger: {
-    color: "#B42348",
+    color: theme.color.accent.danger,
   },
   accent: {
     color: theme.color.accent.energy,
   },
 });
-

@@ -38,18 +38,17 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     borderRadius: theme.radius.lg,
     borderWidth: theme.borderWidth.hairline,
-    borderColor: "#F2BEC9",
-    backgroundColor: "#FFF1F4",
+    borderColor: theme.color.accent.danger,
+    backgroundColor: theme.color.bg.elevated,
     padding: theme.spacing.lg,
     gap: theme.spacing.sm,
   },
   title: {
     ...theme.typography.heading,
-    color: "#A52245",
+    color: theme.color.accent.danger,
   },
   message: {
     ...theme.typography.body,
     color: theme.color.fg.secondary,
   },
 });
-

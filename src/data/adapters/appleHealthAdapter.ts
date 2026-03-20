@@ -120,7 +120,12 @@ export class AppleHealthAdapter implements HealthProviderAdapter {
     const targetWindow =
       window ??
       createWindow(
-        new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+        (() => {
+          const now = new Date();
+          const start = new Date(now);
+          start.setHours(0, 0, 0, 0);
+          return start.toISOString();
+        })(),
         new Date().toISOString(),
         "today",
       );

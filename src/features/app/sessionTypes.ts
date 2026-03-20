@@ -1,4 +1,12 @@
-import type { ConsistencyLabel, MetricKey } from "@/src/domain/models";
+import type {
+  ConnectionRecord,
+  ConsistencyLabel,
+  IntegrationProvider,
+  ManagedIntegrationProvider,
+  MetricKey,
+  MetricSource,
+  ProviderSnapshot,
+} from "@/src/domain/models";
 
 export type FocusPillar = "fitness" | "mindset" | "learning" | "recovery";
 
@@ -11,6 +19,27 @@ export type HomeSegment = "squads" | "friends";
 export type AccountabilityStyle = "friends" | "squad-first" | "mixed";
 
 export type AuthState = "signed-out" | "authenticated" | "demo";
+
+export type BootstrapStatus =
+  | "idle"
+  | "loading"
+  | "needs_onboarding"
+  | "ready"
+  | "error";
+
+export type CheckInSourcePreference =
+  | "auto"
+  | ManagedIntegrationProvider
+  | "manual";
+
+export type ProviderConnectionMap = Record<
+  ManagedIntegrationProvider,
+  ConnectionRecord
+>;
+
+export type ProviderSnapshotMap = Partial<
+  Record<ManagedIntegrationProvider, ProviderSnapshot | null>
+>;
 
 export interface Friend {
   id: string;
@@ -50,6 +79,20 @@ export interface SquadMessage {
   clientMessageId?: string;
 }
 
+export interface SquadMemberSummary {
+  id: string;
+  squadId: string;
+  userId: string;
+  role: string;
+  state: string;
+  joinedAt: string;
+  leftAt?: string;
+  displayName: string;
+  username: string;
+  missionLine?: string;
+  isCurrentUser: boolean;
+}
+
 export interface Habit {
   id: string;
   title: string;
@@ -65,6 +108,8 @@ export interface PostMetricDisplay {
   label: string;
   value: number | string;
   unit?: string;
+  provider?: IntegrationProvider;
+  source?: MetricSource;
 }
 
 export interface ProgressPost {
@@ -79,6 +124,8 @@ export interface ProgressPost {
   caption: string;
   createdAt: string;
   metrics: PostMetricDisplay[];
+  sourceProvider?: IntegrationProvider;
+  sourceProviders?: IntegrationProvider[];
   consistencyScore: number;
   consistencyLabel: ConsistencyLabel;
   reactions: {
@@ -119,6 +166,7 @@ export interface CheckInDraft {
   type: PostType;
   audience: AudienceVisibility;
   squadId?: string;
+  sourcePreference: CheckInSourcePreference;
   caption: string;
   manualWorkoutName: string;
   manualDurationMinutes: string;

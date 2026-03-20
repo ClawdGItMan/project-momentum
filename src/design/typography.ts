@@ -1,85 +1,74 @@
-import { Platform, TextStyle } from "react-native";
+import { TextStyle } from "react-native";
 
-const iosFaces = {
-  display: "AvenirNext-Heavy",
-  heading: "AvenirNext-DemiBold",
-  body: "AvenirNext-Regular",
-  metric: "Menlo",
-};
-
-const androidFaces = {
-  display: "sans-serif-black",
-  heading: "sans-serif-medium",
-  body: "sans-serif",
-  metric: "monospace",
-};
-
-const face = Platform.select({
-  ios: iosFaces,
-  android: androidFaces,
-  default: androidFaces,
-});
+export const fontFamilies = {
+  serifSemiBold: "CormorantGaramond-SemiBold",
+  serifBold: "CormorantGaramond-Bold",
+  sansRegular: "Manrope-Regular",
+  sansMedium: "Manrope-Medium",
+  sansSemiBold: "Manrope-SemiBold",
+  sansBold: "Manrope-Bold",
+  sansExtraBold: "Manrope-ExtraBold",
+} as const;
 
 export const typography = {
   hero: {
-    fontFamily: face.display,
-    fontSize: 36,
-    lineHeight: 42,
-    letterSpacing: -0.8,
+    fontFamily: fontFamilies.serifSemiBold,
+    fontSize: 46,
+    lineHeight: 48,
+    letterSpacing: -0.9,
   } satisfies TextStyle,
   title: {
-    fontFamily: face.heading,
-    fontSize: 28,
-    lineHeight: 34,
-    letterSpacing: -0.4,
+    fontFamily: fontFamilies.serifSemiBold,
+    fontSize: 40,
+    lineHeight: 42,
+    letterSpacing: -0.6,
   } satisfies TextStyle,
   heading: {
-    fontFamily: face.heading,
-    fontSize: 22,
-    lineHeight: 28,
+    fontFamily: fontFamilies.sansExtraBold,
+    fontSize: 20,
+    lineHeight: 26,
     letterSpacing: -0.2,
   } satisfies TextStyle,
   body: {
-    fontFamily: face.body,
-    fontSize: 16,
-    lineHeight: 24,
+    fontFamily: fontFamilies.sansRegular,
+    fontSize: 17,
+    lineHeight: 28,
   } satisfies TextStyle,
   bodySmall: {
-    fontFamily: face.body,
-    fontSize: 14,
-    lineHeight: 20,
+    fontFamily: fontFamilies.sansRegular,
+    fontSize: 15,
+    lineHeight: 24,
   } satisfies TextStyle,
   caption: {
-    fontFamily: face.body,
+    fontFamily: fontFamilies.sansMedium,
     fontSize: 12,
     lineHeight: 16,
-    letterSpacing: 0.2,
+    letterSpacing: 0.4,
   } satisfies TextStyle,
   label: {
-    fontFamily: face.heading,
-    fontSize: 14,
+    fontFamily: fontFamilies.sansSemiBold,
+    fontSize: 13,
     lineHeight: 18,
-    letterSpacing: 0.1,
+    letterSpacing: 0.5,
   } satisfies TextStyle,
   button: {
-    fontFamily: face.heading,
+    fontFamily: fontFamilies.sansBold,
     fontSize: 15,
     lineHeight: 18,
-    letterSpacing: 0.3,
-  } satisfies TextStyle,
-  metric: {
-    fontFamily: face.metric,
-    fontSize: 18,
-    lineHeight: 22,
     letterSpacing: 0.2,
   } satisfies TextStyle,
+  metric: {
+    fontFamily: fontFamilies.sansBold,
+    fontSize: 24,
+    lineHeight: 28,
+    letterSpacing: -0.4,
+  } satisfies TextStyle,
   metricLarge: {
-    fontFamily: face.metric,
-    fontSize: 26,
-    lineHeight: 30,
-    letterSpacing: 0.1,
+    fontFamily: fontFamilies.sansExtraBold,
+    fontSize: 42,
+    lineHeight: 44,
+    letterSpacing: -0.9,
   } satisfies TextStyle,
 } as const;
 
 export type TypographyRole = keyof typeof typography;
-

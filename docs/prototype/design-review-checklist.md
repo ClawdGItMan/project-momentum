@@ -2,14 +2,16 @@
 
 ## Purpose
 
-Use this checklist before calling major UI work done. Project Momentum should feel disciplined, modern, interactive, and worth spending time in, not merely functional.
+Use this checklist before calling major UI work done. Outtcast should feel high-end, performance-led, editorial, and worth spending time in, not merely functional.
 
 ## Design System Baseline
 
 - color, type, spacing, radius, border, shadow, and motion tokens exist in a shared source of truth
 - components use semantic tokens, not one-off raw values
-- typography roles are consistent across screens
+- typography roles are consistent across screens, especially `Cormorant Garamond` for editorial moments and `Manrope` for technical UI
 - repeated interaction patterns are reusable components, not copied local styles
+- tonal layering does most of the structural work; heavy divider lines are rare
+- proof surfaces feel more tailored than generic social cards
 
 ## Screen Quality Bar
 
@@ -21,6 +23,7 @@ Every primary screen should have:
 - a memorable visual moment
 - clean spacing rhythm and alignment
 - touch targets that feel comfortable on iPhone-sized screens
+- an editorial top that resolves into a clearer technical body
 
 ## State Coverage
 
@@ -38,15 +41,16 @@ Check all relevant states:
 
 - motion explains state changes instead of decorating them
 - main actions have intentional feedback
-- sheets, tabs, and transitions feel smooth and restrained
-- check-in completion feels rewarding without becoming noisy
+- sheets, tabs, and transitions feel smooth, restrained, and precise
+- check-in completion feels like a soft ceremony without becoming noisy
 
 ## Product-Specific Checks
 
-- onboarding feels branded and emotionally clear
-- profile feels like a momentum board, not a plain bio page
-- feed cards emphasize progress structure over generic posting
-- composer feels fast, guided, and low-friction
+- onboarding feels like a curated invitation and curated interview
+- profile feels like a mission-led momentum board, not a plain bio page
+- feed cards emphasize tailored proof structure over generic posting
+- composer feels like a fast ritual, not a generic form
+- squads feel like an inner circle studio, not a chat product
 - privacy and visibility settings are understandable at a glance
 
 ## Integration UX Checks
@@ -62,3 +66,4 @@ Check all relevant states:
 - does the screen make progress feel aspirational rather than performative?
 - does the UI feel more premium than a rough prototype?
 - if this appeared in a demo, would it increase conviction?
+- does this screen feel like a private members club for people doing the work?

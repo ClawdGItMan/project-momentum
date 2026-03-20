@@ -1,20 +1,61 @@
+import { useEffect, useState } from "react";
 import { Redirect, Tabs } from "expo-router";
 
 import { theme } from "@/src/design";
 import { useMomentumSession } from "@/src/features/app/MomentumSessionProvider";
+import { SessionGateScreen } from "@/src/features/app/SessionGateScreen";
 
 export default function AppTabsLayout() {
-  const { authReady, authState, onboardingComplete, sessionHydrated } = useMomentumSession();
+  const [clientMounted, setClientMounted] = useState(false);
+  const {
+    authReady,
+    authState,
+    bootstrapError,
+    bootstrapStatus,
+    refreshFromBackend,
+    sessionHydrated,
+    signOut,
+  } = useMomentumSession();
 
-  if (!sessionHydrated || !authReady) {
-    return null;
+  useEffect(() => {
+    setClientMounted(true);
+  }, []);
+
+  if (!clientMounted || !sessionHydrated || !authReady) {
+    return (
+      <SessionGateScreen
+        title="Loading Momentum"
+        message="Restoring your private account before the app shell opens."
+      />
+    );
   }
 
   if (authState === "signed-out") {
     return <Redirect href={"/(auth)/sign-in" as never} />;
   }
 
-  if (!onboardingComplete) {
+  if (authState !== "demo" && (bootstrapStatus === "idle" || bootstrapStatus === "loading")) {
+    return (
+      <SessionGateScreen
+        title="Loading Momentum"
+        message="Restoring your private account before the app shell opens."
+      />
+    );
+  }
+
+  if (authState !== "demo" && bootstrapStatus === "error") {
+    return (
+      <SessionGateScreen
+        title="Account needs a retry"
+        message="Momentum could not load the current account yet."
+        error={bootstrapError}
+        onRetry={() => void refreshFromBackend()}
+        onSignOut={() => void signOut()}
+      />
+    );
+  }
+
+  if (authState !== "demo" && bootstrapStatus !== "ready") {
     return <Redirect href="/(onboarding)/welcome" />;
   }
 
@@ -43,6 +84,12 @@ export default function AppTabsLayout() {
       <Tabs.Screen name="habits/index" options={{ title: "Habits" }} />
       <Tabs.Screen name="profile/index" options={{ title: "Profile" }} />
       <Tabs.Screen name="squads/index" options={{ title: "Squads" }} />
+      <Tabs.Screen
+        name="account/index"
+        options={{
+          href: null,
+        }}
+      />
       <Tabs.Screen
         name="connections/index"
         options={{

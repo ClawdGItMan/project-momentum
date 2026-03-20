@@ -23,7 +23,7 @@ export function Card({ title, subtitle, children, style, elevated = false }: Car
 
 const styles = StyleSheet.create({
   container: {
-    padding: theme.spacing.md,
+    padding: theme.spacing.lg,
     gap: theme.spacing.xs,
   },
   title: {
@@ -35,6 +35,6 @@ const styles = StyleSheet.create({
     color: theme.color.fg.secondary,
   },
   body: {
-    gap: theme.spacing.sm,
+    gap: theme.spacing.md,
   },
 });

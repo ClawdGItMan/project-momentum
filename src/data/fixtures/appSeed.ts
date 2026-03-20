@@ -3,6 +3,10 @@ import {
   seededAppleHealthCoverage,
   seededAppleHealthMetrics,
   seededConsistencyWeek,
+  seededStravaCoverage,
+  seededStravaMetrics,
+  seededWhoopCoverage,
+  seededWhoopMetrics,
 } from "@/src/data/fixtures/metrics";
 import type { ConnectionRecord, ProviderSnapshot } from "@/src/domain/models";
 import type {
@@ -138,10 +142,12 @@ export const postsSeed: ProgressPost[] = [
     caption: "Short lift, no drama. Showed up before work and that was the win.",
     createdAt: "2026-03-16T07:18:00.000Z",
     metrics: [
-      { label: "Workout", value: "Upper body" },
-      { label: "Duration", value: 42, unit: "min" },
-      { label: "Energy", value: 416, unit: "kcal" },
+      { label: "Workout", value: "Upper body", provider: "apple-health", source: "live" },
+      { label: "Duration", value: 42, unit: "min", provider: "apple-health", source: "live" },
+      { label: "Energy", value: 416, unit: "kcal", provider: "apple-health", source: "live" },
     ],
+    sourceProvider: "apple-health",
+    sourceProviders: ["apple-health"],
     consistencyScore: 84,
     consistencyLabel: "Locked In",
     reactions: {
@@ -160,9 +166,11 @@ export const postsSeed: ProgressPost[] = [
     caption: "Protected sleep and skipped the revenge scroll. Feels better already.",
     createdAt: "2026-03-15T21:42:00.000Z",
     metrics: [
-      { label: "Sleep", value: 7.6, unit: "hr" },
-      { label: "Steps", value: 10120 },
+      { label: "Sleep", value: 7.6, unit: "hr", provider: "whoop", source: "live" },
+      { label: "Recovery", value: 78, unit: "%", provider: "whoop", source: "live" },
     ],
+    sourceProvider: "whoop",
+    sourceProviders: ["whoop"],
     consistencyScore: 76,
     consistencyLabel: "Locked In",
     reactions: {
@@ -176,6 +184,7 @@ export const postsSeed: ProgressPost[] = [
 export const checkInDraftSeed: CheckInDraft = {
   type: "workout",
   audience: "friends",
+  sourcePreference: "auto",
   caption: "Lifted even though the day was packed. That matters more than perfect volume.",
   manualWorkoutName: "Strength session",
   manualDurationMinutes: "42",
@@ -195,6 +204,36 @@ export const appleHealthPreviewSnapshot: ProviderSnapshot = {
   capturedAt: new Date().toISOString(),
   metrics: seededAppleHealthMetrics,
   coverage: seededAppleHealthCoverage,
+};
+
+export const stravaPreviewConnection: ConnectionRecord = {
+  provider: "strava",
+  state: "connected_limited",
+  connectedAt: new Date().toISOString(),
+  lastSyncAt: new Date().toISOString(),
+  coverage: seededStravaCoverage,
+};
+
+export const stravaPreviewSnapshot: ProviderSnapshot = {
+  provider: "strava",
+  capturedAt: new Date().toISOString(),
+  metrics: seededStravaMetrics,
+  coverage: seededStravaCoverage,
+};
+
+export const whoopPreviewConnection: ConnectionRecord = {
+  provider: "whoop",
+  state: "connected",
+  connectedAt: new Date().toISOString(),
+  lastSyncAt: new Date().toISOString(),
+  coverage: seededWhoopCoverage,
+};
+
+export const whoopPreviewSnapshot: ProviderSnapshot = {
+  provider: "whoop",
+  capturedAt: new Date().toISOString(),
+  metrics: seededWhoopMetrics,
+  coverage: seededWhoopCoverage,
 };
 
 export const consistencySeed = seededConsistency;

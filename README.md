@@ -45,6 +45,11 @@ Run the app with:
 - `npm run ios`
 - `npm run ios:xcode`
 
+For real founder-alpha account actions on a physical iPhone, set
+`EXPO_PUBLIC_BACKEND_URL=http://YOUR_MAC_LAN_IP:8787` in your local `.env`
+and keep `npm run backend:dev` running. `localhost` and `127.0.0.1` point at
+the phone, not your Mac.
+
 For a practical demo handoff, use [docs/ops/demo-runbook.md](docs/ops/demo-runbook.md).
 
 For the founder-friendly collaboration flow, use [docs/ops/cofounder-setup.md](docs/ops/cofounder-setup.md).
@@ -56,6 +61,7 @@ For the background AI and merge rules, use [docs/ops/collaboration-playbook.md](
 ### Root docs
 
 - [AGENTS.md](AGENTS.md): operating instructions for any agent working in this repo
+- [DESIGN.md](DESIGN.md): visual-system source of truth for Stitch and future UI redesign passes
 - [heartbeat.md](heartbeat.md): live execution dashboard
 - [soul.md](soul.md): mission, tone, and product north star
 - [memory.md](memory.md): durable facts, decisions, assumptions, and open questions
@@ -82,6 +88,8 @@ For the background AI and merge rules, use [docs/ops/collaboration-playbook.md](
 - [docs/prototype/user-flows.md](docs/prototype/user-flows.md): critical user journeys
 - [docs/prototype/screen-map.md](docs/prototype/screen-map.md): app structure and screen inventory
 - [docs/prototype/expo-tech-plan.md](docs/prototype/expo-tech-plan.md): recommended prototype architecture
+- [docs/prototype/stitch-redesign-plan.md](docs/prototype/stitch-redesign-plan.md): Stitch-driven redesign workflow and implementation map
+- [docs/prototype/stitch-screen-prompts.md](docs/prototype/stitch-screen-prompts.md): prompt pack for the first Stitch screen exploration pass
 - [docs/prototype/content-and-copy.md](docs/prototype/content-and-copy.md): onboarding and in-app voice
 - [docs/prototype/design-review-checklist.md](docs/prototype/design-review-checklist.md): UI quality bar for screens and flows
 

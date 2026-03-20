@@ -1,7 +1,11 @@
 import { PgBoss, type Job } from "pg-boss";
-import type { Logger } from "pino";
 
 import type { BackendEnv } from "../config/env";
+import {
+  handleProviderSyncJobs,
+  handleProviderWebhookJobs,
+} from "./providers/sync";
+import type { ProviderQueueRuntime } from "./providers/types";
 
 export const queueJobNames = {
   consistencyRecompute: "consistency.recompute",
@@ -16,41 +20,65 @@ export function createQueue(env: BackendEnv) {
   });
 }
 
-export async function registerDefaultWorkers(queue: PgBoss, logger: Logger) {
-  await queue.createQueue(queueJobNames.consistencyRecompute);
-  await queue.createQueue(queueJobNames.providerSync);
-  await queue.createQueue(queueJobNames.webhookProcess);
+function summarizeJobs(jobs: Job<object>[]) {
+  return jobs.map((job) => {
+    const data = (job.data ?? {}) as Record<string, unknown>;
 
-  await queue.work(queueJobNames.consistencyRecompute, async (jobs: Job<object>[]) => {
-    logger.info(
-      {
-        jobIds: jobs.map((job) => job.id),
-        jobName: queueJobNames.consistencyRecompute,
-        payloads: jobs.map((job) => job.data),
-      },
-      "Consistency recompute job received.",
-    );
+    return {
+      id: job.id,
+      provider: typeof data.provider === "string" ? data.provider : undefined,
+      userId: typeof data.userId === "string" ? data.userId : undefined,
+      syncRunId: typeof data.syncRunId === "string" ? data.syncRunId : undefined,
+      webhookEventId:
+        typeof data.webhookEventId === "string" ? data.webhookEventId : undefined,
+      mode: typeof data.mode === "string" ? data.mode : undefined,
+      reason: typeof data.reason === "string" ? data.reason : undefined,
+      eventType: typeof data.eventType === "string" ? data.eventType : undefined,
+      sourceReference:
+        typeof data.sourceReference === "string" ? data.sourceReference : undefined,
+    };
   });
+}
 
-  await queue.work(queueJobNames.providerSync, async (jobs: Job<object>[]) => {
-    logger.info(
+export async function registerDefaultWorkers(runtime: ProviderQueueRuntime) {
+  await runtime.queue.createQueue(queueJobNames.consistencyRecompute);
+  await runtime.queue.createQueue(queueJobNames.providerSync);
+  await runtime.queue.createQueue(queueJobNames.webhookProcess);
+
+  await runtime.queue.work(
+    queueJobNames.consistencyRecompute,
+    async (jobs: Job<object>[]) => {
+      runtime.logger.info(
+        {
+          jobIds: jobs.map((job) => job.id),
+          jobName: queueJobNames.consistencyRecompute,
+        },
+        "Consistency recompute job received.",
+      );
+    },
+  );
+
+  await runtime.queue.work(queueJobNames.providerSync, async (jobs: Job<object>[]) => {
+    runtime.logger.info(
       {
-        jobIds: jobs.map((job) => job.id),
         jobName: queueJobNames.providerSync,
-        payloads: jobs.map((job) => job.data),
+        jobs: summarizeJobs(jobs),
       },
-      "Provider sync job received.",
+      "Provider sync jobs received.",
     );
+
+    await handleProviderSyncJobs(runtime, jobs);
   });
 
-  await queue.work(queueJobNames.webhookProcess, async (jobs: Job<object>[]) => {
-    logger.info(
+  await runtime.queue.work(queueJobNames.webhookProcess, async (jobs: Job<object>[]) => {
+    runtime.logger.info(
       {
-        jobIds: jobs.map((job) => job.id),
         jobName: queueJobNames.webhookProcess,
-        payloads: jobs.map((job) => job.data),
+        jobs: summarizeJobs(jobs),
       },
-      "Webhook processing job received.",
+      "Provider webhook jobs received.",
     );
+
+    await handleProviderWebhookJobs(runtime, jobs);
   });
 }

@@ -28,14 +28,15 @@ const styles = StyleSheet.create({
     backgroundColor: theme.color.bg.elevated,
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.color.stroke.subtle,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    minWidth: 92,
-    gap: 2,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    minWidth: 112,
+    gap: 4,
   },
   label: {
     ...theme.typography.caption,
     color: theme.color.fg.secondary,
+    letterSpacing: 0.7,
   },
   valueWrap: {
     flexDirection: "row",
@@ -51,4 +52,3 @@ const styles = StyleSheet.create({
     color: theme.color.fg.muted,
   },
 });
-

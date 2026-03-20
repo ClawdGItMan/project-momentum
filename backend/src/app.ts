@@ -35,7 +35,7 @@ export function createApp(input: {
     "*",
     cors({
       origin: input.env.corsOrigin ?? "*",
-      allowMethods: ["GET", "POST", "PATCH", "OPTIONS"],
+      allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
       allowHeaders: ["authorization", "content-type", "x-request-id"],
     }),
   );

@@ -3,7 +3,11 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { theme } from "@/src/design";
 import type { ProgressPost } from "@/src/features/app/sessionTypes";
-import { formatMetricValue, formatTimestamp } from "@/src/lib/formatters";
+import {
+  formatMetricValue,
+  formatProviderLabel,
+  formatTimestamp,
+} from "@/src/lib/formatters";
 import { Badge, Button, Card, MetricPill } from "@/src/ui/primitives";
 
 type ProgressPostCardProps = {
@@ -29,6 +33,20 @@ export function ProgressPostCard({
       : post.audience === "only-me"
         ? "Visible only to you."
         : "Visible in your trusted accountability lane.";
+  const sourceProviders = Array.from(
+    new Set(
+      [
+        post.sourceProvider,
+        ...(post.sourceProviders ?? []),
+        ...post.metrics.map((metric) => metric.provider),
+      ].filter((provider): provider is NonNullable<typeof provider> => Boolean(provider)),
+    ),
+  );
+  const provenanceCopy = sourceProviders.length
+    ? `Source${sourceProviders.length === 1 ? "" : "s"}: ${sourceProviders
+        .map((provider) => formatProviderLabel(provider))
+        .join(" + ")}`
+    : "Source: manual";
 
   return (
     <Card elevated style={styles.card}>
@@ -61,6 +79,7 @@ export function ProgressPostCard({
         <Text style={styles.footerText}>
           {post.consistencyLabel} • {post.consistencyScore}
         </Text>
+        <Text style={styles.footerText}>{provenanceCopy}</Text>
         {post.reactions.emojis.length ? (
           <Text style={styles.emojiRow}>{post.reactions.emojis.join(" ")}</Text>
         ) : null}
