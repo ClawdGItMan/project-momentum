@@ -34,6 +34,8 @@ import {
   whoopPreviewConnection,
   whoopPreviewSnapshot,
 } from "@/src/data/fixtures/appSeed";
+import { characterSeed } from "@/src/data/fixtures/characterSeed";
+import type { CharacterProfile } from "@/src/domain/models";
 import {
   bootstrapOnboarding,
   createFriendInviteByUsername,
@@ -128,6 +130,7 @@ type MomentumSessionValue = {
   healthLoading: boolean;
   checkInDraft: CheckInDraft;
   consistency: ConsistencyResult;
+  character: CharacterProfile;
   lastPublishedPostId: string | null;
   chatOverviews: SquadChatOverview[];
   squadMessages: Record<string, SquadMessage[]>;
@@ -452,6 +455,7 @@ export function MomentumSessionProvider({
   const [healthLoading, setHealthLoading] = useState(false);
   const [checkInDraft, setCheckInDraft] = useState<CheckInDraft>(checkInDraftSeed);
   const [consistency, setConsistency] = useState<ConsistencyResult>(consistencySeed);
+  const [character, setCharacter] = useState<CharacterProfile>(characterSeed);
   const [lastPublishedPostId, setLastPublishedPostId] = useState<string | null>(null);
   const [chatOverviews, setChatOverviews] = useState<SquadChatOverview[]>([]);
   const [squadMessages, setSquadMessages] = useState<Record<string, SquadMessage[]>>({});
@@ -2093,6 +2097,7 @@ export function MomentumSessionProvider({
       healthLoading,
       checkInDraft,
       consistency,
+      character,
       lastPublishedPostId,
       chatOverviews,
       squadMessages,
@@ -2147,6 +2152,7 @@ export function MomentumSessionProvider({
       authState,
       bootstrapError,
       bootstrapStatus,
+      character,
       chatLoading,
       chatOverviews,
       checkInDraft,
