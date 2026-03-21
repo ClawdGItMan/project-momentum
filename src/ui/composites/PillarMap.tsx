@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import type { PillarRating } from "@/src/domain/models";
+import { getTierColor } from "@/src/domain/character/tierColors";
 import { theme } from "@/src/design";
 import { Card } from "@/src/ui/primitives";
 
@@ -16,12 +17,8 @@ const pillarMeta: Record<string, { label: string; icon: string; color: string }>
   recovery: { label: "Recovery", icon: "😴", color: theme.color.accent.success },
 };
 
-function scoreColor(score: number): string {
-  if (score >= 80) return theme.color.accent.success;
-  if (score >= 60) return theme.color.accent.energy;
-  if (score >= 40) return theme.color.accent.consistency;
-  if (score >= 20) return theme.color.accent.warning;
-  return theme.color.fg.muted;
+function scoreColor(rating: PillarRating): string {
+  return getTierColor(rating.tier);
 }
 
 export function PillarMap({ ratings }: PillarMapProps) {
@@ -46,7 +43,7 @@ export function PillarMap({ ratings }: PillarMapProps) {
                     styles.barFill,
                     {
                       width: barWidth,
-                      backgroundColor: scoreColor(rating.score),
+                      backgroundColor: scoreColor(rating),
                     },
                   ]}
                 />

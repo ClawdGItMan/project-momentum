@@ -2,10 +2,12 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import type { CharacterProfile, PillarRating } from "@/src/domain/models";
+import type { MuscleGroupRating } from "@/src/domain/character/muscleGroups";
 import { theme } from "@/src/design";
 import { ScrollScreen } from "@/src/ui/primitives";
 import {
   AchievementsGrid,
+  CharacterSilhouette,
   MomentumScoreCard,
   PillarMap,
   PillarRatingCard,
@@ -13,12 +15,14 @@ import {
 
 type CharacterScreenProps = {
   character: CharacterProfile;
+  muscleGroups: MuscleGroupRating[];
   userName: string;
   missionLine: string;
 };
 
 export function CharacterScreen({
   character,
+  muscleGroups,
   userName,
   missionLine,
 }: CharacterScreenProps) {
@@ -31,8 +35,15 @@ export function CharacterScreen({
           <Text style={styles.mission}>{missionLine}</Text>
         </View>
 
-        {/* Momentum Score Hero */}
-        <MomentumScoreCard character={character} />
+        {/* Character Silhouette — the hero */}
+        <CharacterSilhouette
+          muscleGroups={muscleGroups}
+          momentumScore={character.momentumScore}
+          momentumTier={character.momentumTier}
+        />
+
+        {/* Momentum Score Summary */}
+        <MomentumScoreCard character={character} compact />
 
         {/* Pillar Map Overview */}
         <PillarMap ratings={character.pillarRatings} />
@@ -48,9 +59,7 @@ export function CharacterScreen({
         {/* Achievements */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Achievements</Text>
-          <AchievementsGrid
-            unlocked={character.achievements}
-          />
+          <AchievementsGrid unlocked={character.achievements} />
         </View>
       </View>
     </ScrollScreen>

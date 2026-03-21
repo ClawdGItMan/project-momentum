@@ -19,7 +19,21 @@ export {
   getTierIndex,
   tierThresholds,
 } from "./tiers";
+
+export {
+  getDominantGlow,
+  getPillarTierColor,
+  getTierColor,
+  getTierGlowOpacity,
+} from "./tierColors";
 export type { TierThreshold } from "./tiers";
+
+export {
+  allMuscleGroupKeys,
+  buildMuscleGroupRating,
+  muscleGroupMeta,
+} from "./muscleGroups";
+export type { MuscleGroupKey, MuscleGroupRating } from "./muscleGroups";
 
 export type {
   AchievementCategory,

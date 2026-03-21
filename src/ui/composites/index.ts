@@ -1,5 +1,6 @@
 export { AchievementBadge } from "./AchievementBadge";
 export { AchievementsGrid } from "./AchievementsGrid";
+export { CharacterSilhouette } from "./CharacterSilhouette";
 export { ConsistencyCard } from "./ConsistencyCard";
 export { MomentumScoreCard } from "./MomentumScoreCard";
 export { PillarMap } from "./PillarMap";

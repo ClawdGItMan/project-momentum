@@ -35,7 +35,9 @@ import {
   whoopPreviewSnapshot,
 } from "@/src/data/fixtures/appSeed";
 import { characterSeed } from "@/src/data/fixtures/characterSeed";
+import { muscleGroupsSeed } from "@/src/data/fixtures/muscleGroupSeed";
 import type { CharacterProfile } from "@/src/domain/models";
+import type { MuscleGroupRating } from "@/src/domain/character/muscleGroups";
 import {
   bootstrapOnboarding,
   createFriendInviteByUsername,
@@ -131,6 +133,7 @@ type MomentumSessionValue = {
   checkInDraft: CheckInDraft;
   consistency: ConsistencyResult;
   character: CharacterProfile;
+  muscleGroups: MuscleGroupRating[];
   lastPublishedPostId: string | null;
   chatOverviews: SquadChatOverview[];
   squadMessages: Record<string, SquadMessage[]>;
@@ -456,6 +459,7 @@ export function MomentumSessionProvider({
   const [checkInDraft, setCheckInDraft] = useState<CheckInDraft>(checkInDraftSeed);
   const [consistency, setConsistency] = useState<ConsistencyResult>(consistencySeed);
   const [character, setCharacter] = useState<CharacterProfile>(characterSeed);
+  const [muscleGroups, setMuscleGroups] = useState<MuscleGroupRating[]>(muscleGroupsSeed);
   const [lastPublishedPostId, setLastPublishedPostId] = useState<string | null>(null);
   const [chatOverviews, setChatOverviews] = useState<SquadChatOverview[]>([]);
   const [squadMessages, setSquadMessages] = useState<Record<string, SquadMessage[]>>({});
@@ -2098,6 +2102,7 @@ export function MomentumSessionProvider({
       checkInDraft,
       consistency,
       character,
+      muscleGroups,
       lastPublishedPostId,
       chatOverviews,
       squadMessages,
@@ -2176,6 +2181,7 @@ export function MomentumSessionProvider({
       joinDayOnesSquad,
       lastPublishedPostId,
       manualFallbackEnabled,
+      muscleGroups,
       onboardingComplete,
       onboardingDraft,
       providerConnections,
