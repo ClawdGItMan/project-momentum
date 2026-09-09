@@ -20,7 +20,7 @@ import type {
   SquadMemberSummary,
   UserProfile,
 } from "@/src/features/app/sessionTypes";
-import { getBackendUrl } from "@/src/lib/backend/config";
+import { getBackendUrl, getReachableBackendUrl } from "@/src/lib/backend/config";
 import { supabase } from "@/src/lib/supabase/client";
 
 type ProfileOverviewRow = {
@@ -490,6 +490,23 @@ async function requireAccessToken() {
   return session.access_token;
 }
 
+function requireReachableBackendUrl(feature: "remote_provider" | "delete_account") {
+  const backendUrl = getReachableBackendUrl();
+  if (backendUrl) {
+    return backendUrl;
+  }
+
+  if (feature === "remote_provider") {
+    throw new Error(
+      "Strava and WHOOP need a reachable backend. This untethered build can keep using the Supabase-backed core app, but remote provider connect, refresh, and disconnect only work when EXPO_PUBLIC_BACKEND_URL points at a hosted API or a Mac on the same network.",
+    );
+  }
+
+  throw new Error(
+    "Delete account needs a reachable backend. This untethered build can keep using the Supabase-backed core app, but account deletion only works when EXPO_PUBLIC_BACKEND_URL points at a hosted API or a Mac on the same network.",
+  );
+}
+
 async function parseBackendJson<T>(response: Response): Promise<T> {
   const json = (await response.json().catch(() => null)) as
     | BackendResponseEnvelope<T>
@@ -940,7 +957,7 @@ export async function startProviderOAuth(
   provider: Exclude<ManagedIntegrationProvider, "apple-health">,
 ) {
   const accessToken = await requireAccessToken();
-  const backendUrl = getBackendUrl();
+  const backendUrl = requireReachableBackendUrl("remote_provider");
   const response = await fetch(`${backendUrl}/integrations/${provider}/connect`, {
     method: "POST",
     headers: {
@@ -960,7 +977,7 @@ export async function syncRemoteProvider(
   provider: Exclude<ManagedIntegrationProvider, "apple-health">,
 ) {
   const accessToken = await requireAccessToken();
-  const backendUrl = getBackendUrl();
+  const backendUrl = requireReachableBackendUrl("remote_provider");
   const response = await fetch(`${backendUrl}/integrations/${provider}/sync`, {
     method: "POST",
     headers: {
@@ -981,7 +998,7 @@ export async function disconnectRemoteProvider(
   provider: Exclude<ManagedIntegrationProvider, "apple-health">,
 ) {
   const accessToken = await requireAccessToken();
-  const backendUrl = getBackendUrl();
+  const backendUrl = requireReachableBackendUrl("remote_provider");
   const response = await fetch(`${backendUrl}/integrations/${provider}`, {
     method: "DELETE",
     headers: {
@@ -1099,7 +1116,7 @@ export async function transferSquadOwnership(
 
 export async function deleteAccount(): Promise<{ deleted: boolean }> {
   const accessToken = await requireAccessToken();
-  const backendUrl = getBackendUrl();
+  const backendUrl = requireReachableBackendUrl("delete_account");
   const deleteUrl = `${backendUrl}/me`;
   let response: Response;
 
@@ -1121,7 +1138,7 @@ export async function deleteAccount(): Promise<{ deleted: boolean }> {
 
     if (host === "localhost" || host === "127.0.0.1") {
       throw new Error(
-        "Delete account needs a reachable backend. On a physical iPhone, set EXPO_PUBLIC_BACKEND_URL to your Mac's LAN IP, for example http://172.18.234.54:8787, and keep `npm run backend:dev` running.",
+        "Delete account needs a reachable backend. On a physical iPhone, set EXPO_PUBLIC_BACKEND_URL=auto to follow the current Metro host, or set it to your Mac's LAN IP such as http://YOUR_MAC_LAN_IP:8787, and keep `npm run backend:dev` running.",
       );
     }
 

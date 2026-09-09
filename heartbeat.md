@@ -84,6 +84,12 @@ Week 1 moving into Phase 2 provider expansion and Stitch-driven UI hardening: th
 - Max: the check-in composer now exposes source selection across `Auto`, Apple Health, Strava, WHOOP, and `Manual`, while post previews/feed cards/profile surfaces now preserve lightweight provider provenance instead of flattening everything into generic metrics
 - Max: the hosted Supabase project was missing `20260319090000_join_onboarding_squad.sql`, so the onboarding `Join Day ones` CTA failed until the public RPC was applied directly to remote and a PostgREST schema reload was triggered
 - Max: a temporary authenticated smoke test against hosted Supabase now confirms `public.join_onboarding_squad(...)` resolves and returns a squad row again
+- Max: local device-debug config now supports `EXPO_PUBLIC_BACKEND_URL=auto`, so the dev build can follow Metro's current host automatically instead of relying on a stale LAN IP for backend-backed founder-alpha actions
+- Max: the local backend is reverified on both `http://localhost:8787/health` and the current Mac LAN host, with Metro successfully serving the real iOS bundle to the paired device
+- Max: physical iPhone installs now work again from the downloaded Xcode 26.4 toolchain after running `xcodebuild -prepareDeviceSupport` for the paired `iPhone 16 Pro Max`, and Metro has already served the real iOS bundle to the device
+- Max: the iOS Podfile now patches the bundled `fmt` pod to `gnu++17` with the consteval-heavy paths disabled, which clears the new Xcode 26.4 native compile failure that surfaced right after device support was repaired
+- Max: the app now also installs as a standalone Release build on the paired iPhone with `EXPO_PUBLIC_BACKEND_URL=disabled`, so the core Supabase-backed founder flow no longer depends on Metro or a live cable connection after install
+- Max: the iOS Podfile now also shims Expo's EXConstants build phase with a no-space `PROJECT_DIR` plus explicit `PROJECT_ROOT`, so Release device builds embed `EXConstants.bundle/app.config` again and no longer die in `expo-linking` at startup under the current spaced repo path
 
 ## Blockers
 
@@ -106,6 +112,9 @@ Week 1 moving into Phase 2 provider expansion and Stitch-driven UI hardening: th
 - physical-iPhone delete-account validation still depends on Metro reloading the new env-backed backend URL and on `npm run backend:dev` staying up on the Mac during the test
 - Apple Health still needs live physical-iPhone proof after the new day-window and sleep-session fixes, because the bridge now reads different APIs and windows than the previous implementation
 - the iPhone still needs one live retest of delete-account after the new consistency-delete guard lands, even though hosted Supabase now reproduces and clears the exact previously failing account shape
+- the active global `xcode-select` path on this Mac still points at `/Applications/Xcode.app` (`Xcode 26.3`), so physical-device builds currently rely on `DEVELOPER_DIR=/Users/me/Downloads/Xcode.app/Contents/Developer` until the newer Xcode is moved into place and selected system-wide
+- untethered founder builds still do not have a publicly reachable privileged backend, so delete-account plus Strava / WHOOP connect-refresh-disconnect remain unavailable away from the Mac unless `EXPO_PUBLIC_BACKEND_URL` points at a hosted API
+- the current untethered iPhone install is still development-signed, so after a clean reinstall the device needs one manual trust approval before SpringBoard will open the icon outside the debugger
 - Strava and WHOOP still need real provider credentials, webhook registration, and live-device OAuth validation before Phase 2 can be called production-credible instead of code-complete
 - the current backend now has two generations of provider helper files in `backend/src/lib/providers/`; the new `service.ts` path is the active runtime, but the older sync/store modules should be reconciled before a broader team handoff
 - multi-provider dedupe and freshness behavior is implemented at the normalized snapshot layer, but still needs a real Apple Health + Strava overlap test and a WHOOP recovery-post test on actual accounts
@@ -134,6 +143,9 @@ Week 1 moving into Phase 2 provider expansion and Stitch-driven UI hardening: th
 - Max: validate existing-user Apple Health refresh from Account on a real iPhone, including honest old-summary labeling when a refresh fails
 - Max: validate ownership transfer plus typed-confirmation account deletion across a multi-member squad and a solo-owned squad
 - Max: restart Metro with the new `EXPO_PUBLIC_BACKEND_URL`, keep the backend dev server alive on the Mac LAN IP, and confirm delete-account succeeds from a physical iPhone instead of failing with a network request error
+- Max: move the working Xcode 26.4 app from `~/Downloads` into `/Applications` and switch `xcode-select` over system-wide so the physical-iPhone path no longer depends on a per-command `DEVELOPER_DIR` override
+- Max: trust the developer profile on the paired iPhone after the clean reinstall, then open the installed Release app from the home screen and verify the untethered core path works after force-quitting Metro
+- Max: decide whether the next untethered step is hosting the privileged backend or logging into Expo for EAS internal-distribution builds that can be reinstalled without a cable
 - Max: verify that the new day-based Apple Health summary now matches the Health app more closely for today’s steps, active energy, and the latest main sleep session
 - Max: retry delete-account from the physical iPhone against an existing account that already has saved Apple Health snapshots and check-ins, then confirm local sign-out/reset completes cleanly
 - Max: validate that `Only me`, `Friends`, and squad visibility match the real Supabase read policies before broader founder-alpha sharing
@@ -163,4 +175,4 @@ High on the product and app direction, high on backend foundation direction, and
 
 ## Last Updated
 
-2026-03-20 10:27 EDT
+2026-03-23 10:46 EDT

@@ -46,9 +46,20 @@ Run the app with:
 - `npm run ios:xcode`
 
 For real founder-alpha account actions on a physical iPhone, set
-`EXPO_PUBLIC_BACKEND_URL=http://YOUR_MAC_LAN_IP:8787` in your local `.env`
-and keep `npm run backend:dev` running. `localhost` and `127.0.0.1` point at
-the phone, not your Mac.
+`EXPO_PUBLIC_BACKEND_URL=auto` in your local `.env` so the app follows the
+current Metro host automatically, or pin it to
+`http://YOUR_MAC_LAN_IP:8787` if you need a fixed override. Keep
+`npm run backend:dev` running. `localhost` and `127.0.0.1` point at the
+phone, not your Mac.
+
+For an untethered phone install that runs without this computer, build the app
+with the Release configuration or the EAS `preview` profile. Those paths should
+use `EXPO_PUBLIC_BACKEND_URL=disabled` unless you already have a hosted backend.
+Core Supabase-backed flows will keep working, but Strava / WHOOP management and
+delete-account remain backend-only until that API is reachable off your laptop.
+Direct Xcode-installed phone builds are still development-signed, so after a
+clean reinstall iOS may require a one-time trust approval for the developer app
+in `Settings -> General -> VPN & Device Management` before the icon will open.
 
 For a practical demo handoff, use [docs/ops/demo-runbook.md](docs/ops/demo-runbook.md).
 

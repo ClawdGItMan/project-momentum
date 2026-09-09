@@ -63,6 +63,21 @@ target 'ProjectMomentum' do
     )
 
     installer.pods_project.targets.each do |target|
+      if target.name == 'fmt'
+        target.build_configurations.each do |config|
+          definitions = config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] || ['$(inherited)']
+          definitions = [definitions] unless definitions.is_a?(Array)
+          definitions |= ['FMT_USE_CONSTEVAL=0', 'FMT_USE_NONTYPE_TEMPLATE_ARGS=0']
+
+          # fmt 11's C++20 compile-time formatting path trips stricter Apple
+          # Clang validation under newer Xcode device builds. Keep the pod on a
+          # more conservative language/macro setup until the upstream podspec
+          # catches up.
+          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = definitions
+          config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++17'
+        end
+      end
+
       next unless target.name == 'EXConstants'
 
       target.shell_script_build_phases.each do |phase|
@@ -70,10 +85,14 @@ target 'ProjectMomentum' do
 
         # Expo's generated phase passes the script path through `bash -c` without
         # quoting the command itself, which breaks when the repo path contains spaces.
-        # We also override PROJECT_DIR so Expo's script still detects the pod build
-        # context correctly when the repo path includes spaces.
+        # Expo's script also reads `basename $PROJECT_DIR` without quoting, so a
+        # spaced repo path can make the EXConstants app.config generation phase
+        # exit early and leave Release builds without an embedded manifest.
         phase.shell_script = <<~'SCRIPT'.strip
-          export PROJECT_DIR="$PODS_ROOT"
+          export PROJECT_DIR="/tmp/Pods"
+          export PROJECT_ROOT="$PODS_ROOT/../.."
+          export NODE_ENV="${NODE_ENV:-production}"
+          mkdir -p "$CONFIGURATION_BUILD_DIR/EXConstants.bundle"
           bash -l -c "\"$PODS_TARGET_SRCROOT/../scripts/get-app-config-ios.sh\""
         SCRIPT
       end

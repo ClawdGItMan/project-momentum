@@ -60,6 +60,7 @@
 - Apple Health is a required v0.1 integration, with manual entry as fallback only.
 - A fresh-session MVP build playbook now exists in `docs/ops/build-session-playbook.md`.
 - The active implementation uses an Expo custom iOS development-build posture instead of Expo Go.
+- Local physical-iPhone dev work should prefer `EXPO_PUBLIC_BACKEND_URL=auto` over a fixed LAN IP unless there is a specific need to pin the backend host manually.
 - The first shipped vertical slice is onboarding -> Apple Health connection -> skippable squad step -> first workout check-in -> seeded Home.
 - Home opens on `Squads` by default, while the first check-in audience defaults to `Friends` unless launched from a squad context.
 - Consistency v0 is now defined as a 7-day `score + label` model with 40% check-ins, 40% habits, and 20% workouts, with the workout share redistributed to habits when fitness is not selected.
@@ -81,6 +82,13 @@
 - `ios/Podfile.properties.json` now enables `ios.buildReactNativeFromSource` because the current repo path with spaces broke React Native prebuilt artifact validation during CocoaPods install.
 - The iOS workspace now includes explicit path-quoting fixes for Expo Constants and the React Native bundle script so Xcode simulator builds work from the current repo path.
 - The local Xcode toolchain is now present and verified; the app installs and opens in the `iPhone 17 Pro` simulator through the Expo development client flow.
+- The local dev-build runtime now accepts `EXPO_PUBLIC_BACKEND_URL=auto`, which lets simulator and physical-iPhone dev builds follow the current Metro host automatically instead of pinning a Mac LAN IP in `.env`.
+- The currently paired physical test phone is an `iPhone 16 Pro Max` on iOS `26.4` beta (`23E244`), while this Mac's globally selected Xcode is still `26.3` (`17C529`); the repo now works around that locally by using a downloaded Xcode 26.4 build through `DEVELOPER_DIR` for phone runs.
+- A downloaded `Xcode 26.4` (`17E192`) app in `~/Downloads/Xcode.app` now works for phone builds when commands set `DEVELOPER_DIR=/Users/me/Downloads/Xcode.app/Contents/Developer`, even though the global `xcode-select` path still points at `/Applications/Xcode.app`.
+- The paired iPhone's device-support path now succeeds after running `xcodebuild -prepareDeviceSupport -platform iOS -osVersion 26.4 -modelCode iPhone17,2 -architecture arm64e` against the Xcode 26.4 toolchain.
+- The iOS Podfile now patches the bundled `fmt` pod to `gnu++17` and disables `FMT_USE_CONSTEVAL` plus `FMT_USE_NONTYPE_TEMPLATE_ARGS` during CocoaPods post-install so Xcode 26.4 device builds no longer fail inside `fmt/format-inl.h`.
+- Untethered founder installs should now use `EXPO_PUBLIC_BACKEND_URL=disabled` unless a public privileged backend exists, so standalone phone builds fail honestly for backend-only actions instead of trying `localhost:8787` on the device.
+- A Release iPhone build signed from the downloaded Xcode 26.4 toolchain now installs successfully on the paired phone without Metro, and the installed app bundle remains `Outtcast` / `com.projectmomentum.prototype`.
 - The repo handoff path now assumes the real `ios/` project files should be shared in git, while `ios/Pods/`, `ios/build/`, and local Codex/Playwright folders remain ignored.
 - A founder-facing collaboration guide now lives in `docs/ops/cofounder-setup.md`.
 - A short Build Owner checklist now lives in `docs/ops/build-owner-checklist.md`.
@@ -160,6 +168,7 @@
 - `npm` is the local package-manager fallback for this repo because `pnpm` was not available in the current environment.
 - This specific environment now has full Xcode installed, so verification can include simulator launch in addition to web export, Expo web runtime, and iOS prebuild.
 - For future collaborators, cloning into a path without spaces is the preferred local setup even though the current repo now contains compatibility patches for the spaced path.
+- Direct untethered iPhone installs from Xcode are currently signed with the local `iOS Team Provisioning Profile`, so deleting the last app from that developer can force a one-time trust approval on the phone before the icon will launch again.
 - GitHub is now the working collaboration source of truth for the two-founder build loop.
 - The first real backend phase should optimize for private social core integrity before advanced personalization or broad provider expansion.
 - The first auth path should be Supabase email/password plus a server-backed onboarding bootstrap, with Sign in with Apple deferred until after the private social core is stable.
@@ -167,6 +176,7 @@
 - Squad chat is part of Phase 1, but it should remain a private text-only support layer under the feed-first product thesis.
 - Non-workout check-ins should be allowed to publish caption-first even when Apple Health has no usable metrics, while workout posts still require either synced workout data or explicit manual fallback details.
 - Existing users should land in a dedicated account/settings hub rather than replaying onboarding, while destructive account operations remain backend-backed and intentionally gated through `DELETE /me` plus ownership transfer where needed.
+- Hosted Supabase is now enough for the untethered founder-alpha core flow, but delete-account plus Strava / WHOOP management still require a reachable privileged backend and should stay visibly unavailable until that API is hosted.
 - Existing apps like Strava or WHOOP only affect Phase 1 insofar as their data already lands in Apple Health; there is no live provider-specific sync UX yet.
 - Phase 2 source precedence is now Apple Health > Strava > WHOOP > manual for workouts, and WHOOP > Apple Health > manual for recovery.
 - The Phase 2 mobile UX keeps Apple Health as the default source but exposes explicit provider management in Account, source selection in Check-in, provider callback deep links, and lightweight provenance in feed/profile surfaces.
@@ -240,6 +250,9 @@
 - Delete reliability detail: hosted Supabase now has a checked-in migration that guards consistency recomputes during cascading user deletion and aligns squad-only post deletion with the squad FK semantics
 - Bug audit detail: browser validation now confirms that the hidden demo session can open squad chat and send demo messages without backend console errors, while `npm run verify` still passes after the session-layer fixes.
 - Apple Health device validation detail: the repo now surfaces native bridge and authorization errors more honestly, but the installed iPhone app must be rebuilt after these native/bridge fixes before live permission testing is meaningful.
+- Physical iPhone install detail: after switching the build command to the downloaded Xcode 26.4 toolchain, preparing device support, and applying the `fmt` pod workaround, the app now builds, installs, launches, and requests the Metro bundle successfully on the paired iPhone.
+- Release manifest detail: untethered iPhone launches were crashing in `expo-linking` until the `ios/Podfile` EXConstants shell phase was shimmed to use a no-space `PROJECT_DIR` and explicit `PROJECT_ROOT`; the built app now contains `EXConstants.bundle/app.config` again under the current spaced repo path.
+- Untethered iPhone install detail: a Release build with `EXPO_PUBLIC_BACKEND_URL=disabled` now builds and installs through the same downloaded Xcode 26.4 toolchain, so the app can live on the phone without needing Metro after install; the remaining launch gate after a clean reinstall is iOS trust approval for the development-signed profile.
 - Apple Health backend validation detail: the hosted project now has live `public` RPC wrappers and an authenticated test confirmed `record_apple_health_snapshot` can insert a real snapshot row through the same mobile RPC contract the app uses.
 - Onboarding backend validation detail: the hosted project now has the safe `touch_updated_at()` function applied directly, and direct SQL verification confirmed `complete_onboarding` can finish again after the consistency recompute path runs.
 - Squad RLS validation detail: the hosted project now has the explicit recursion-fix migration applied, and authenticated bootstrap reads against real squad membership rows now succeed instead of failing on `public.squad_memberships`.

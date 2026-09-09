@@ -5,6 +5,11 @@ function normalizeUrl(value: string) {
   return value.trim().replace(/\/+$/u, "");
 }
 
+function isBackendDisabled(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return normalized === "disabled" || normalized === "none" || normalized === "off";
+}
+
 function getHostFromExpo() {
   const explicitHost =
     Constants.expoConfig?.hostUri ??
@@ -40,9 +45,13 @@ function getHostFromExpo() {
   return match?.[1] ?? null;
 }
 
-export function getBackendUrl() {
+export function getReachableBackendUrl() {
   const explicit = process.env.EXPO_PUBLIC_BACKEND_URL?.trim();
-  if (explicit) {
+  if (explicit && isBackendDisabled(explicit)) {
+    return null;
+  }
+
+  if (explicit && explicit.toLowerCase() !== "auto") {
     return normalizeUrl(explicit);
   }
 
@@ -53,6 +62,15 @@ export function getBackendUrl() {
   const host = getHostFromExpo();
   if (host) {
     return `http://${host}:8787`;
+  }
+
+  return null;
+}
+
+export function getBackendUrl() {
+  const reachable = getReachableBackendUrl();
+  if (reachable) {
+    return reachable;
   }
 
   return "http://localhost:8787";
