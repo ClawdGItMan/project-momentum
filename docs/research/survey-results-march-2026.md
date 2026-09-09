@@ -5,8 +5,7 @@
 - **Sample:** 26 respondents (friends, family, extended network)
 - **Demographics:** 96% aged 18–34, 73% exercise 3+ days/week, 58% male / 38% female / 4% non-binary
 - **Method:** Google Form, 24 questions (multi-select, Likert, free-text)
-- **Full report:** [Google Docs](https://docs.google.com/document/d/1wXlW4K7TC2fg_cS2dKJkjtjw3RXf-VGO--bKHcD3gkg/edit)
-- **Executive brief:** [Google Docs](https://docs.google.com/document/d/1CzaHNL3FUzPq5H152xXXb4uu2WnSC551vB_pLQ-RNQc/edit)
+- **Full report & executive brief:** kept in private founder docs (not linked here)
 
 ---
 
